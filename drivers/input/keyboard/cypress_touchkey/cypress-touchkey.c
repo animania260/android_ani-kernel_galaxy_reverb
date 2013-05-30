@@ -92,7 +92,6 @@ struct cypress_touchkey_info {
 	struct workqueue_struct			*led_wq;
 	struct work_struct			led_work;
 #endif
-	bool is_powering_on;
 
 };
 
@@ -112,14 +111,14 @@ static void cypress_touchkey_led_work(struct work_struct *work)
 	u8 buf;
 	int ret;
 
-	if (info->brightness == LED_OFF){
+	if (info->brightness == LED_OFF) {
 		buf = CYPRESS_LED_OFF;
 	printk(KERN_ERR"[TouchKey] Touch LED OFF");
 		}
 	else {
 		buf = CYPRESS_LED_ON;
 	printk(KERN_ERR "[TouchKey] Touch LED ON");
-		}	
+		}
 	mutex_lock(&info->touchkey_led_mutex);
 
 	ret = i2c_smbus_write_byte_data(info->client, CYPRESS_GEN, buf);
@@ -156,13 +155,6 @@ static irqreturn_t cypress_touchkey_interrupt(int irq, void *dev_id)
 	if (ret) {
 		dev_err(&info->client->dev, "interrupt check(%d).\n", ret);
 		goto out;
-	}
-
-	
-	if (info->is_powering_on) {
-		dev_err(&info->client->dev, "%s: ignoring spurious boot "
-					"interrupt\n", __func__);
-		return IRQ_HANDLED;
 	}
 
 #if defined(SEC_TOUCHKEY_VERBOSE_DEBUG)
@@ -222,7 +214,7 @@ static void cypress_touchkey_con_hw(struct cypress_touchkey_info *dev_info,
 #endif
 }
 
-/*
+
 static int cypress_touchkey_auto_cal(struct cypress_touchkey_info *dev_info)
 {
 	struct cypress_touchkey_info *info = dev_info;
@@ -237,7 +229,7 @@ static int cypress_touchkey_auto_cal(struct cypress_touchkey_info *dev_info)
 
 	return ret;
 }
-*/
+
 static int cypress_touchkey_led_on(struct cypress_touchkey_info *dev_info)
 {
 	struct cypress_touchkey_info *info = dev_info;
@@ -273,7 +265,7 @@ static ssize_t touch_version_read(struct device *dev,
 	u8 data;
 	int count;
 
-	/*msleep(40);*/
+	msleep(40);
 	data = i2c_smbus_read_byte_data(info->client, CYPRESS_FW_VER);
 	count = snprintf(buf, 20, "0x%02x\n", data);
 
@@ -622,7 +614,7 @@ static ssize_t touch_autocal_testmode(struct device *dev,
 			cypress_touchkey_con_hw(info, true);
 			msleep(50);
 		}
-		/*cypress_touchkey_auto_cal(info);*/
+		cypress_touchkey_auto_cal(info);
 	}
 
 	return count;
@@ -658,9 +650,9 @@ static ssize_t autocalibration_status(struct device *dev,
 
 	ret = i2c_smbus_read_i2c_block_data(info->client,
 				CYPRESS_GEN, 6, data);
-	
+
 	/*if ((data[5] & 0x80))*/
-		return snprintf(buf, 20, "Enabled\n", ret);
+		return snprintf(buf, 20, "Enabled %d\n", ret);
 	/*else
 		return sprintf(buf, "Disabled\n");
 		*/
@@ -739,8 +731,6 @@ static int __devinit cypress_touchkey_probe(struct i2c_client *client,
 	input_dev->phys = info->phys;
 	input_dev->id.bustype = BUS_I2C;
 	input_dev->dev.parent = &client->dev;
-
-	info->is_powering_on = true;
 
 
 	set_bit(EV_SYN, input_dev->evbit);
@@ -974,7 +964,7 @@ static int __devinit cypress_touchkey_probe(struct i2c_client *client,
 			dev_attr_autocal_stat.attr.name);
 		goto err_sysfs;
 	}
-	info->is_powering_on = false;
+
 	return 0;
 
 err_req_irq:
@@ -1014,7 +1004,6 @@ static int cypress_touchkey_suspend(struct device *dev)
 	struct cypress_touchkey_info *info = i2c_get_clientdata(client);
 	int ret = 0;
 
-	info->is_powering_on = true;
 	disable_irq(info->irq);
 	if (info->pdata->gpio_led_en)
 		cypress_touchkey_con_hw(info, false);
@@ -1032,18 +1021,8 @@ static int cypress_touchkey_resume(struct device *dev)
 		cypress_touchkey_con_hw(info, true);
 	msleep(100);
 
-	/*cypress_touchkey_auto_cal(info);*/
-
-	if (touchled_cmd_reversed) {
-			touchled_cmd_reversed = 0;
-			i2c_smbus_write_byte_data(info->client,
-					CYPRESS_GEN, touchkey_led_status);
-			printk(KERN_DEBUG "LED returned on\n");
-		}
-
 	enable_irq(info->irq);
 
-	info->is_powering_on = false;
 	return ret;
 }
 #endif

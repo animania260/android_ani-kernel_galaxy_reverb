@@ -2572,7 +2572,7 @@ static int otg_debugfs_init(struct msm_otg *dev)
 	if (!otg_debug_root)
 		return -ENOENT;
 
-	otg_debug_mode = debugfs_create_file("mode", 0222,
+	otg_debug_mode = debugfs_create_file("mode", 0220,
 						otg_debug_root, dev,
 						&otgfs_fops);
 	if (!otg_debug_mode)

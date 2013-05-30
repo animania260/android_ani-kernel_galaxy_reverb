@@ -39,7 +39,13 @@
 #define CAM_RESET 130
 #define CAM_STANDBY 131
 #define CAM_EN 3
+
+#ifdef CONFIG_MACH_ICON
+#define CAM_EN_1 143
+#else
 #define CAM_EN_1 132
+#endif
+
 #define CAM_EN_2 132
 #define VCAM_I2C_SCL 177
 #define VCAM_I2C_SDA 174
@@ -47,9 +53,6 @@
 #define CAM_VT_RST 175		/* yjlee : add */
 #define CAM_MCLK 15			/* yjlee : add */
 
-#ifdef CONFIG_MACH_ICON
-#define CAM_EN_1	143
-#endif
 
 #define PCAM_CONNECT_CHECK		0
 #define PCAM_VT_MODE			1
@@ -300,7 +303,6 @@ static int sr130pc10_set_movie_mode(int mode)
 static int sr130pc10_exif_iso(void)
 {
 	uint32_t iso_value = 0;
-	int err = 0;
 
 	unsigned short gain;
 	int calc_gain;
@@ -329,7 +331,6 @@ static int sr130pc10_exif_iso(void)
 static int sr130pc10_exif_shutter_speed(void)
 {
 	uint32_t shutter_speed = 0;
-	int err = 0;
 
 	unsigned short val1, val2, val3;
 

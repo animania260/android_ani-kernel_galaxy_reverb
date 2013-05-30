@@ -1311,7 +1311,7 @@ static int __init audio_dev_ctrl_init(void)
 	routing_info.voice_state = VOICE_STATE_INVALID;
 #ifdef CONFIG_DEBUG_FS
 	snprintf(name, sizeof name, "rtc_get_device");
-	dentry = debugfs_create_file(name, S_IFREG | S_IRUGO | S_IWUGO,
+	dentry = debugfs_create_file(name, S_IRUGO | S_IWUSR |S_IWGRP,
 			NULL, NULL, &rtc_acdb_debug_fops);
 	if (IS_ERR(dentry))
 		MM_DBG("debugfs_create_file failed\n");

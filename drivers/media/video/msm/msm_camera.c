@@ -578,11 +578,13 @@ static unsigned long msm_pmem_frame_vtop_lookup(struct msm_sync *sync,
 	hlist_for_each_entry_safe(region, node, n, &sync->pmem_frames, list) {
 		pr_err("%s, listed vaddr 0x%lx, r_p0 = 0x%x p0_off 0x%x"
 			"r_p1 = 0x%x, p1_off 0x%x, r_p2 = 0x%x, p2_off = 0x%x"
-			" active = %d\n", __func__, buffer,
+			" r_fd = %d , fd=%d,"
+			" active = %d, change_flag=%d\n", __func__, region->info.vaddr,
 			region->info.planar0_off,
 			p0_off, region->info.planar1_off,
 			p1_off, region->info.planar2_off, p2_off,
-			region->info.active);
+			region->info.fd, fd,
+			region->info.active, change_flag);
 	}
 
 	spin_unlock_irqrestore(&sync->pmem_frame_spinlock, flags);
@@ -3089,6 +3091,7 @@ static int __msm_release(struct msm_sync *sync)
 				&sync->pmem_frames, list) {
 			hlist_del(hnode);
 #ifdef CONFIG_MSM_MULTIMEDIA_USE_ION
+                        if((client_for_ion != NULL) &&  (region->handle != NULL))       
 				ion_free(client_for_ion, region->handle);
 #else
 			put_pmem_file(region->file);

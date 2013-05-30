@@ -209,6 +209,7 @@ static struct mmc_platform_data sdc2_data = {
 	.pin_data	= &mmc_slot_pin_data[SDCC2],
 	.sdiowakeup_irq = MSM_GPIO_TO_INT(GPIO_SDC2_DAT1_WAKEUP),
 	.msm_bus_voting_data = &sps_to_ddr_bus_voting_data,
+	.msm_bus_voting_data = &sps_to_ddr_bus_voting_data,
 };
 static struct mmc_platform_data *msm9615_sdc2_pdata = &sdc2_data;
 #else

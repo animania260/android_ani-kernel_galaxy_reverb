@@ -292,7 +292,6 @@ static int msm_csic_init(struct v4l2_subdev *sd, uint32_t *csic_version)
 		if (rc < 0) {
 			csic_dev->hw_version = 0;
 			iounmap(csic_dev->base);
-			csic_dev->base = NULL;
 			return rc;
 		}
 	}

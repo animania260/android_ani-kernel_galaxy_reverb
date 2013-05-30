@@ -59,7 +59,7 @@ static int debug_level = 5;
 
 extern int mcsdl_download_binary_data(void);
 extern int fsa9480_i2c_read(unsigned char u_addr, unsigned char *pu_data);
-static u8 fsa9480_device1 = 0x0;
+/*static u8 fsa9480_device1 = 0x0;*/
 
 
 #ifdef CONFIG_MOUSE_OPTJOY
@@ -256,12 +256,12 @@ void mcsdl_vdd_off(void)
 	}
 }
 
-static int melfas_i2c_write(struct i2c_client* p_client, u8* data, int len)
+/*static int melfas_i2c_write(struct i2c_client* p_client, u8* data, int len)
 {
 	struct i2c_msg msg;
 
 	msg.addr = p_client->addr;
-	msg.flags = 0; /* I2C_M_WR */
+	msg.flags = 0;
 	msg.len = len;
 	msg.buf = data ;
 
@@ -272,7 +272,7 @@ static int melfas_i2c_write(struct i2c_client* p_client, u8* data, int len)
 	}
 
 	return 0;
-}
+}*/
 
 static int melfas_i2c_read(struct i2c_client* p_client, u8 reg, u8* data, int len)
 {
@@ -353,7 +353,7 @@ static void melfas_read_resolution(void)
 	//printk("%s :, Set as max_x: %d, max_y: %d\n", __func__,melfas_ts->info.max_x, melfas_ts->info.max_y);
 }
 
-static void melfas_firmware_download(void)
+/*static void melfas_firmware_download(void)
 {
 
 #ifdef CONFIG_TOUCHSCREEN_MELFAS_FIRMWARE_UPDATE
@@ -405,11 +405,11 @@ static void melfas_firmware_download(void)
 #endif
 
 #endif
-}
+}*/
 
 
 
-static ssize_t registers_show(struct device *dev, struct device_attribute *attr, char *buf)
+/*static ssize_t registers_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	int status, mode_ctl, hw_rev, fw_ver;
 
@@ -437,9 +437,9 @@ static ssize_t registers_show(struct device *dev, struct device_attribute *attr,
 	sprintf(buf, "%sRegister 0x31 (fw_ver)  : 0x%08x\n", buf, fw_ver);
 
 	return sprintf(buf, "%s", buf);
-}
+}*/
 
-static ssize_t registers_store(
+/*static ssize_t registers_store(
 		struct device *dev, struct device_attribute *attr,
 		const char *buf, size_t size)
 {
@@ -452,16 +452,16 @@ static ssize_t registers_store(
 		printk("[TOUCH] software reset.\n");
 	}
 	return size;
-}
+}*/
 
-static ssize_t gpio_show(struct device *dev, struct device_attribute *attr, char *buf)
+/*static ssize_t gpio_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	sprintf(buf, "[TOUCH] Melfas Tsp Gpio Info.\n");
 	sprintf(buf, "%sGPIO TOUCH_INT : %s\n", buf, gpio_get_value(GPIO_TOUCH_INT)? "HIGH":"LOW");
 	return sprintf(buf, "%s", buf);
-}
+}*/
 
-static ssize_t gpio_store(
+/*static ssize_t gpio_store(
 		struct device *dev, struct device_attribute *attr,
 		const char *buf, size_t size)
 {
@@ -485,20 +485,20 @@ static ssize_t gpio_store(
 		mdelay(200);
 	}
 	return size;
-}
+}*/
 
 
-static ssize_t firmware_show(struct device *dev, struct device_attribute *attr, char *buf)
+/*static ssize_t firmware_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	melfas_read_version();
 
 	sprintf(buf, "H/W rev. 0x%x F/W ver. 0x%x\n", melfas_ts->hw_rev, melfas_ts->fw_ver);
 	return sprintf(buf, "%s", buf);
-}
+}*/
 
 
 
-static ssize_t firmware_store(
+/*static ssize_t firmware_store(
 		struct device *dev, struct device_attribute *attr,
 		const char *buf, size_t size)
 {
@@ -526,16 +526,16 @@ static ssize_t firmware_store(
 #endif
 
 	return size;
-}
+}*/
 
 
 
-static ssize_t debug_show(struct device *dev, struct device_attribute *attr, char *buf)
+/*static ssize_t debug_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	return sprintf(buf, "%d", debug_level);
-}
+}*/
 
-static ssize_t debug_store(
+/*static ssize_t debug_store(
 		struct device *dev, struct device_attribute *attr,
 		const char *buf, size_t size)
 {
@@ -544,7 +544,7 @@ static ssize_t debug_store(
 	}
 
 	return size;
-}
+}*/
 
 #ifdef TSP_TEST_MODE
 void touch_screen_sleep()
@@ -1314,10 +1314,10 @@ static ssize_t tsp_test_wakeup_store(struct device *dev, struct device_attribute
 
 #endif
 
-static DEVICE_ATTR(gpio, S_IRUGO | S_IWUSR, gpio_show, gpio_store);
+/*static DEVICE_ATTR(gpio, S_IRUGO | S_IWUSR, gpio_show, gpio_store);
 static DEVICE_ATTR(registers, S_IRUGO | S_IWUSR, registers_show, registers_store);
 static DEVICE_ATTR(firmware, S_IRUGO | S_IWUSR | S_IWGRP, firmware_show, firmware_store);
-static DEVICE_ATTR(debug, S_IRUGO | S_IWUSR, debug_show, debug_store);
+static DEVICE_ATTR(debug, S_IRUGO | S_IWUSR, debug_show, debug_store);*/
 
 #ifdef TSP_TEST_MODE
 static DEVICE_ATTR(tsp_name, S_IRUGO | S_IWUSR | S_IWGRP, tsp_name_show, NULL) ;
@@ -1410,7 +1410,7 @@ static void melfas_work_func(void)
 	uint8_t buf[66];
 	int read_num = 0, touchType = 0, touchState = 0
 		, fingerID = 0, keyID = 0;
-	unsigned long flags;
+	/*unsigned long flags;*/
 	for (i = 0; i < 10; i++)
 	{
 		ret = melfas_i2c_read(melfas_ts->client, 0x0F, buf, 1);
@@ -1553,9 +1553,6 @@ static void melfas_work_func(void)
 
 irqreturn_t melfas_ts_irq_handler(int irq, void *dev_id)
 {
-	int ret;
-	int ret1;
-
 	struct i2c_msg msg[2];
 
 	uint8_t start_reg;
@@ -1575,7 +1572,7 @@ irqreturn_t melfas_ts_irq_handler(int irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 
-int melfas_ts_probe(void)
+int melfas_ts_probe(struct platform_device *pdev)
 {
 	int ret = 0;
 	uint16_t max_x=0, max_y=0;
@@ -1670,14 +1667,14 @@ int melfas_ts_probe(void)
 #endif
 
 	return 0;
-err_misc_register_device_failed:
+/*err_misc_register_device_failed:*/
 err_input_register_device_failed:
 	input_free_device(melfas_ts->input_dev);
 
 err_input_dev_alloc_failed:
-err_detect_failed:
+/*err_detect_failed:*/
 	kfree(melfas_ts);
-err_alloc_data_failed:
+/*err_alloc_data_failed:*/
 err_check_functionality_failed:
 	return ret;
 
@@ -1692,7 +1689,7 @@ int melfas_ts_remove(struct platform_device *dev)
 	return 0;
 }
 
-int melfas_ts_gen_touch_up(void)
+void melfas_ts_gen_touch_up(void)
 {
 	// report up key if needed
 	int i;

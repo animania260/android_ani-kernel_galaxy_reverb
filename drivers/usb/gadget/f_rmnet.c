@@ -82,13 +82,8 @@ static struct usb_interface_descriptor rmnet_interface_desc = {
 	.bDescriptorType =	USB_DT_INTERFACE,
 	.bNumEndpoints =	3,
 	.bInterfaceClass =	USB_CLASS_VENDOR_SPEC,
-#ifdef CONFIG_USB_ANDROID_SAMSUNG_COMPOSITE
-	.bInterfaceSubClass = 0xE0,
-	.bInterfaceProtocol = 0x00,
-#else
-	.bInterfaceSubClass =	USB_CLASS_VENDOR_SPEC,
-	.bInterfaceProtocol =	USB_CLASS_VENDOR_SPEC,
-#endif
+	.bInterfaceSubClass =	0xE0,
+	.bInterfaceProtocol =	0x00,
 	/* .iInterface = DYNAMIC */
 };
 
@@ -716,6 +711,8 @@ frmnet_setup(struct usb_function *f, const struct usb_ctrlrequest *ctrl)
 
 	case ((USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE) << 8)
 			| USB_CDC_SEND_ENCAPSULATED_COMMAND:
+
+		pr_debug("%s Request Type :  USB_CDC_SEND_ENCAPSULATED_COMMAND\n",__func__);
 		ret = w_length;
 		req->complete = frmnet_cmd_complete;
 		req->context = dev;
@@ -729,6 +726,7 @@ frmnet_setup(struct usb_function *f, const struct usb_ctrlrequest *ctrl)
 		else {
 			unsigned len;
 			struct rmnet_ctrl_pkt *cpkt;
+			pr_debug("%s Request Type :  USB_CDC_GET_ENCAPSULATED_RESPONSE\n",__func__);
 
 			spin_lock(&dev->lock);
 			if (list_empty(&dev->cpkt_resp_q)) {
@@ -754,7 +752,9 @@ frmnet_setup(struct usb_function *f, const struct usb_ctrlrequest *ctrl)
 		break;
 	case ((USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE) << 8)
 			| USB_CDC_REQ_SET_CONTROL_LINE_STATE:
+		pr_debug("%s Request Type :  USB_CDC_REQ_SET_CONTROL_LINE_STATE\n",__func__);
 		if (dev->port.notify_modem) {
+			pr_debug("%s : Now notify MOdem\n",__func__);
 			port_num = rmnet_ports[dev->port_num].ctrl_xport_num;
 			dev->port.notify_modem(&dev->port, port_num, w_value);
 		}
@@ -790,6 +790,8 @@ static int frmnet_bind(struct usb_configuration *c, struct usb_function *f)
 	struct usb_ep			*ep;
 	struct usb_composite_dev	*cdev = c->cdev;
 	int				ret = -ENODEV;
+	
+	pr_info("%s\n",__func__);
 
 	dev->ifc_id = usb_interface_id(c, f);
 	if (dev->ifc_id < 0) {

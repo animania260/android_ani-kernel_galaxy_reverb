@@ -817,6 +817,8 @@ static void msm_hs_stop_rx_locked(struct uart_port *uport)
 	struct msm_hs_port *msm_uport = UARTDM_TO_MSM(uport);
 	unsigned int data;
 
+	pr_warn("%s : start", __func__);
+
 	clk_enable(msm_uport->clk);
 
 	/* disable dlink */
@@ -837,6 +839,8 @@ static void msm_hs_stop_rx_locked(struct uart_port *uport)
 		msm_uport->rx.flush = FLUSH_STOP;
 
 	clk_disable(msm_uport->clk);
+
+	pr_warn("%s : end", __func__);
 }
 
 /*  Transmit the next chunk of data */
@@ -1993,6 +1997,7 @@ static void msm_hs_shutdown(struct uart_port *uport)
 	unsigned long flags;
 	struct msm_hs_port *msm_uport = UARTDM_TO_MSM(uport);
 
+	pr_warn("%s : start", __func__);
 	BUG_ON(msm_uport->rx.flush < FLUSH_STOP);
 	tasklet_kill(&msm_uport->tx.tlet);
 	wait_event(msm_uport->rx.wait, msm_uport->rx.flush == FLUSH_SHUTDOWN);
@@ -2041,6 +2046,8 @@ static void msm_hs_shutdown(struct uart_port *uport)
 
 	if (use_low_power_wakeup(msm_uport))
 		free_irq(msm_uport->wakeup.irq, msm_uport);
+
+	pr_warn("%s : start", __func__);
 }
 
 static void __exit msm_serial_hs_exit(void)

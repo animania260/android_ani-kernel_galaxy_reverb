@@ -2545,6 +2545,15 @@ static int __devinit mms_ts_probe(struct i2c_client *client,
 		info->dvfs_lock_status = false;
 #endif
 
+
+#ifdef TSK_FACTORY
+		ret = factory_init_tk(info);
+		if (ret < 0) {
+			dev_err(&client->dev, "failed to init factory init (tk)\n");
+			goto err_factory_init;
+		}
+#endif
+
 	i2c_set_clientdata(client, info);
 
 	ret = mms_ts_fw_load(info);
@@ -2582,13 +2591,6 @@ static int __devinit mms_ts_probe(struct i2c_client *client,
 #endif
 
 
-#ifdef TSK_FACTORY
-	ret = factory_init_tk(info);
-	if (ret < 0) {
-		dev_err(&client->dev, "failed to init factory init (tk)\n");
-		goto err_factory_init;
-	}
-#endif
 	return 0;
 
 #ifdef TSK_FACTORY

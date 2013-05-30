@@ -210,6 +210,7 @@ struct ftk_ts_info {
 	struct i2c_client *client;
 	struct input_dev *input_dev;
 	struct hrtimer timer;
+/*	struct timer_list timer_charger; */
 	struct hrtimer timer_charger;
 	struct timer_list timer_firmware;
 	struct work_struct work;
@@ -1176,6 +1177,7 @@ static void ts_event_handler(struct work_struct *work)
 }
 
 #ifdef FTK_USE_CHARGER_DETECTION
+/* Changing to hr_timer as in ICS code base */
 static enum hrtimer_restart ftk_charger_tmer_func(struct hrtimer *timer)
 {
 	struct ftk_ts_info *info =
@@ -1192,6 +1194,7 @@ static int ftk_charger_timer_start(struct ftk_ts_info *info)
 		return 0;
 
 	#ifdef FTK_USE_CHARGER_DETECTION
+	/* changing to hr timer implementaion as in ICS code base and starting the timer here*/
 	hrtimer_start(&info->timer_charger, ktime_set(0, 500000000),
 			HRTIMER_MODE_REL);
 	/*printk(KERN_ERR "FTK Charger Timer Start %d\n", ftk_charger_cnt);*/
@@ -1282,8 +1285,10 @@ static void ts_charger_event_handler(struct work_struct *work_charger)
 		ftk_interrupt(info, INT_ENABLE);
 	}
 
+	
 	if (hrtimer_active(&info->timer_charger))
 		ftk_charger_timer_stop(info);
+	
 		ftk_charger_timer_start(info);
 }
 
@@ -1532,7 +1537,7 @@ static int stm_ts_probe(struct i2c_client *client,
 
 	msleep(500);
 
-	printk(KERN_ERR "FTK Charger Timer Start %d\n", ftk_charger_cnt);
+	printk(KERN_ERR "%s:FTK Charger Timer Start %d\n",__func__, ftk_charger_cnt);
 	ftk_charger_timer_start(info);
 	ftk_firmware_timer_start(info);
 
@@ -1968,6 +1973,8 @@ void ftk_read_memory(struct ftk_ts_info *info, unsigned int Address,
 		}
 	}
 
+	kfree(pMemoryAll);
+
 	handshake(info, HANDSHAKE_END);
 
 	ftk_interrupt(info, INT_ENABLE);
@@ -2001,8 +2008,6 @@ void ftk_read_memory(struct ftk_ts_info *info, unsigned int Address,
 		}
 		col_counter++;
 	}
-
-	kfree(pMemoryAll);
 }
 
 void ftk_read_delta(struct ftk_ts_info *info, short *min, short *max)

@@ -508,7 +508,7 @@ static int __init afe_init(void)
 
 #ifdef CONFIG_DEBUG_FS
 	debugfs_afelb = debugfs_create_file("afe_loopback",
-	S_IFREG | S_IWUGO, NULL, (void *) "afe_loopback",
+	S_IFREG | S_IWUSR | S_IWGRP, NULL, (void *) "afe_loopback",
 	&afe_debug_fops);
 #endif
 

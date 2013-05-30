@@ -1267,7 +1267,7 @@ static void uart_close(struct tty_struct *tty, struct file *filp)
 	uport = state->uart_port;
 	port = &state->port;
 
-	pr_debug("uart_close(%d) called\n", uport->line);
+	pr_warn("uart_close(%d) called : start\n", uport->line);
 
 	mutex_lock(&port->mutex);
 	spin_lock_irqsave(&port->lock, flags);
@@ -1324,6 +1324,7 @@ static void uart_close(struct tty_struct *tty, struct file *filp)
 	 */
 	if (port->flags & ASYNC_INITIALIZED) {
 		unsigned long flags;
+		pr_warn("port->flags : 0x%lX\n", port->flags);
 		spin_lock_irqsave(&uport->lock, flags);
 		uport->ops->stop_rx(uport);
 		spin_unlock_irqrestore(&uport->lock, flags);
@@ -1364,6 +1365,8 @@ static void uart_close(struct tty_struct *tty, struct file *filp)
 
 done:
 	mutex_unlock(&port->mutex);
+
+	pr_warn("uart_close() called : end\n");
 }
 
 static void __uart_wait_until_sent(struct uart_port *port, int timeout)

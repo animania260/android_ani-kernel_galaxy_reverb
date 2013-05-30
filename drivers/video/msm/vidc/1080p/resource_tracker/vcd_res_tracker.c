@@ -157,7 +157,7 @@ ion_bail_out:
 
 static void res_trk_pmem_free(struct ddl_buf_addr *addr)
 {
-	/*TODO: Enhance for pmem*/
+	/* TODO Pmem*/
 	struct ddl_context *ddl_context;
 	ddl_context = ddl_get_context();
 	if (ddl_context->video_ion_client) {
@@ -203,8 +203,7 @@ static int res_trk_pmem_alloc
 				rc = -ENOMEM;
 				goto bail_out;
 			}
-		}
-		else {
+		} else {
 			addr->alloc_handle = NULL;
 			addr->alloced_phys_addr = PIL_FW_BASE_ADDR;
 			addr->buffer_size = sz;
@@ -216,6 +215,7 @@ static int res_trk_pmem_alloc
 		if (!addr->alloced_phys_addr) {
 			DDL_MSG_ERROR("%s() : acm alloc failed (%d)\n",
 					__func__, alloc_size);
+			rc = -ENOMEM;
 			goto bail_out;
 		}
 		addr->buffer_size = sz;
@@ -436,6 +436,10 @@ bail_out:
 static struct ion_client *res_trk_create_ion_client(void){
 	struct ion_client *video_client;
 	video_client = msm_ion_client_create(-1, "video_client");
+	if (IS_ERR_OR_NULL(video_client)) {
+		VCDRES_MSG_ERROR("%s: Unable to create ION client\n", __func__);
+		video_client = NULL;
+	}
 	return video_client;
 }
 
@@ -520,6 +524,9 @@ int res_trk_update_bus_perf_level(struct vcd_dev_ctxt *dev_ctxt, u32 perf_level)
 	u32 enc_perf_level = 0, dec_perf_level = 0;
 	u32 bus_clk_index, client_type = 0;
 	int rc = 0;
+	bool turbo_enabled = false;
+	bool turbo_supported =
+		!resource_context.vidc_platform_data->disable_turbo;
 
 	cctxt_itr = dev_ctxt->cctxt_list_head;
 	while (cctxt_itr) {
@@ -527,6 +534,9 @@ int res_trk_update_bus_perf_level(struct vcd_dev_ctxt *dev_ctxt, u32 perf_level)
 			dec_perf_level += cctxt_itr->reqd_perf_lvl;
 		else
 			enc_perf_level += cctxt_itr->reqd_perf_lvl;
+
+		if (cctxt_itr->is_turbo_enabled)
+			turbo_enabled = true;
 		cctxt_itr = cctxt_itr->next;
 	}
 
@@ -543,12 +553,17 @@ int res_trk_update_bus_perf_level(struct vcd_dev_ctxt *dev_ctxt, u32 perf_level)
 
 	if (dev_ctxt->reqd_perf_lvl + dev_ctxt->curr_perf_lvl == 0)
 		bus_clk_index = 2;
-	else if (resource_context.vidc_platform_data->disable_turbo
-						&& bus_clk_index == 3) {
-		VCDRES_MSG_ERROR("Warning: Turbo mode not supported "
-				" falling back to 1080p bus\n");
+	else if ((!turbo_supported || !turbo_enabled) && bus_clk_index == 3) {
+		if (!turbo_supported)
+			VCDRES_MSG_MED("Warning: Turbo mode not supported "\
+					" falling back to 1080p bus\n");
 		bus_clk_index = 2;
 	}
+
+	if (bus_clk_index == 3)
+		dev_ctxt->turbo_mode_set = true;
+	else
+		dev_ctxt->turbo_mode_set = false;
 
 	bus_clk_index = (bus_clk_index << 1) + (client_type + 1);
 	VCDRES_MSG_LOW("%s(), bus_clk_index = %d", __func__, bus_clk_index);
@@ -564,6 +579,9 @@ u32 res_trk_set_perf_level(u32 req_perf_lvl, u32 *pn_set_perf_lvl,
 	struct vcd_dev_ctxt *dev_ctxt)
 {
 	u32 vidc_freq = 0;
+	bool turbo_supported =
+		!resource_context.vidc_platform_data->disable_turbo;
+
 	if (!pn_set_perf_lvl || !dev_ctxt) {
 		VCDRES_MSG_ERROR("%s(): NULL pointer! dev_ctxt(%p)\n",
 			__func__, dev_ctxt);
@@ -571,8 +589,7 @@ u32 res_trk_set_perf_level(u32 req_perf_lvl, u32 *pn_set_perf_lvl,
 	}
 	VCDRES_MSG_LOW("%s(), req_perf_lvl = %d", __func__, req_perf_lvl);
 
-	if (resource_context.vidc_platform_data->disable_turbo
-			&& req_perf_lvl > RESTRK_1080P_MAX_PERF_LEVEL) {
+	if (!turbo_supported && req_perf_lvl > RESTRK_1080P_MAX_PERF_LEVEL) {
 		VCDRES_MSG_ERROR("%s(): Turbo not supported! dev_ctxt(%p)\n",
 			__func__, dev_ctxt);
 	}
@@ -602,10 +619,11 @@ u32 res_trk_set_perf_level(u32 req_perf_lvl, u32 *pn_set_perf_lvl,
 		*pn_set_perf_lvl = RESTRK_1080P_TURBO_PERF_LEVEL;
 	}
 
-	if (resource_context.vidc_platform_data->disable_turbo &&
-		*pn_set_perf_lvl == RESTRK_1080P_TURBO_PERF_LEVEL) {
-		VCDRES_MSG_ERROR("Warning: Turbo mode not supported "
-				" falling back to 1080p clocks\n");
+	if ((!turbo_supported || !dev_ctxt->turbo_mode_set) &&
+		 *pn_set_perf_lvl == RESTRK_1080P_TURBO_PERF_LEVEL) {
+		if (!turbo_supported)
+			VCDRES_MSG_ERROR("Warning: Turbo mode not supported "\
+					" falling back to 1080p clocks\n");
 		vidc_freq = vidc_clk_table[2];
 		*pn_set_perf_lvl = RESTRK_1080P_MAX_PERF_LEVEL;
 	}
@@ -844,10 +862,6 @@ u32 res_trk_get_disable_dmx(void){
 	return resource_context.disable_dmx;
 }
 
-u32 res_trk_get_min_dpb_count(void){
-	return resource_context.vidc_platform_data->cont_mode_dpb_count;
-}
-
 void res_trk_set_mem_type(enum ddl_mem_area mem_type)
 {
 	resource_context.res_mem_type = mem_type;
@@ -992,18 +1006,4 @@ u32 get_res_trk_perf_level(enum vcd_perf_level perf_level)
 		res_trk_perf_level = -EINVAL;
 	}
 	return res_trk_perf_level;
-}
-
-u32 res_trk_estimate_perf_level(u32 pn_perf_lvl)
-{
-	VCDRES_MSG_MED("%s(), req_perf_lvl = %d", __func__, pn_perf_lvl);
-	if ((pn_perf_lvl >= RESTRK_1080P_VGA_PERF_LEVEL) &&
-		(pn_perf_lvl < RESTRK_1080P_720P_PERF_LEVEL)) {
-		return RESTRK_1080P_720P_PERF_LEVEL;
-	} else if ((pn_perf_lvl >= RESTRK_1080P_720P_PERF_LEVEL) &&
-			(pn_perf_lvl < RESTRK_1080P_MAX_PERF_LEVEL)) {
-		return RESTRK_1080P_MAX_PERF_LEVEL;
-	} else {
-		return pn_perf_lvl;
-	}
 }

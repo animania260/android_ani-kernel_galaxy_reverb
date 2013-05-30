@@ -316,9 +316,10 @@ struct audio_mvs_info_type {
 	struct list_head free_out_queue;
 
 	struct task_struct *task;
-	wait_queue_head_t in_wait;
+
 	wait_queue_head_t wait;
 	wait_queue_head_t mode_wait;
+	wait_queue_head_t in_wait;
 	wait_queue_head_t out_wait;
 
 	struct mutex lock;
@@ -1495,12 +1496,16 @@ static ssize_t audio_mvs_write(struct file *file,
 
 	pr_debug("%s:\n", __func__);
 
-	mutex_lock(&audio->in_lock);
-	if (audio->state == AUDIO_MVS_STARTED) {
-		if (count <= sizeof(struct q5v2_msm_audio_mvs_frame)) {
-			if (!list_empty(&audio->free_in_queue)) {
-				buf_node =
-					list_first_entry(&audio->free_in_queue,
+	rc = wait_event_interruptible_timeout(audio->in_wait,
+		(!list_empty(&audio->free_in_queue) ||
+		audio->state == AUDIO_MVS_STOPPED), 1 * HZ);
+	if (rc > 0) {
+		mutex_lock(&audio->in_lock);
+		if (audio->state == AUDIO_MVS_STARTED) {
+			if (count <= sizeof(struct msm_audio_mvs_frame)) {
+				if (!list_empty(&audio->free_in_queue)) {
+					buf_node = list_first_entry(
+						&audio->free_in_queue,
 						struct audio_mvs_buf_node,
 						list);
 					list_del(&buf_node->list);
@@ -1509,25 +1514,34 @@ static ssize_t audio_mvs_write(struct file *file,
 							    buf,
 							    count);
 
-				list_add_tail(&buf_node->list,
+					list_add_tail(&buf_node->list,
 						      &audio->in_queue);
+				} else {
+					pr_err("%s: No free DL buffs\n", __func__);
+				}
 			} else {
-				pr_err("%s: No free DL buffs\n", __func__);
+				pr_err("%s: Write count %d < sizeof(frame) %d",
+					__func__, count,
+					sizeof(struct msm_audio_mvs_frame));
+
+				rc = -ENOMEM;
 			}
 		} else {
-			pr_err("%s: Write count %d < sizeof(frame) %d",
-			       __func__, count,
-			       sizeof(struct q5v2_msm_audio_mvs_frame));
+			pr_err("%s: Write performed in invalid state %d\n",
+				__func__, audio->state);
 
-			rc = -ENOMEM;
+			rc = -EPERM;
 		}
-	} else {
-		pr_err("%s: Write performed in invalid state %d\n",
-		       __func__, audio->state);
+		mutex_unlock(&audio->in_lock);
+	} else if (rc == 0) {
+		pr_err("%s: No free DL buffs\n", __func__);
 
-		rc = -EPERM;
+		rc = -ETIMEDOUT;
+	} else {
+		pr_err("%s: write was interrupted\n", __func__);
+
+		rc = -ERESTARTSYS;
 	}
-	mutex_unlock(&audio->in_lock);
 	return rc;
 }
 

@@ -287,32 +287,33 @@ int vibetonz_clk_off(struct device *dev)
 #endif	/* VIBE_ENABLE_SYSTEM_TIMER */
 
 static ssize_t sysfs_MND_M_store(struct device *dev,
-		struct device_attribute *attr, char *buf)
+		struct device_attribute *attr, const char *buf, size_t count)
 {
 	sscanf(buf, "%d\n", &g_nlra_gp_clk_m);
-	return sprintf(buf, "%d(%x)\n", g_nlra_gp_clk_m, g_nlra_gp_clk_m);
+	return count;
 }
 
+
+
 static ssize_t sysfs_MND_N_store(struct device *dev,
-		struct device_attribute *attr, char *buf)
+		struct device_attribute *attr, const char *buf,size_t count)
 {
 	sscanf(buf, "%d\n", &g_nlra_gp_clk_n);
-	return sprintf(buf, "%d(%x)\n", g_nlra_gp_clk_n, g_nlra_gp_clk_n);
+	return count;
 }
 
 static ssize_t sysfs_MND_D_store(struct device *dev,
-		struct device_attribute *attr, char *buf)
+		struct device_attribute *attr, const char *buf,size_t count)
 {
 	sscanf(buf, "%d\n", &g_nlra_gp_clk_d);
-	return sprintf(buf, "%d(%x)\n", g_nlra_gp_clk_d, g_nlra_gp_clk_d);
+	return count;
 }
 
 static ssize_t sysfs_MND_P_store(struct device *dev,
-		struct device_attribute *attr, char *buf)
+		struct device_attribute *attr, const char *buf,size_t count)
 {
 	sscanf(buf, "%d\n", &g_nlra_gp_clk_PreDiv);
-	return sprintf(buf, "%d(%x)\n",
-			g_nlra_gp_clk_PreDiv, g_nlra_gp_clk_PreDiv);
+	return count;
 }
 
 static ssize_t sysfs_MND_M_show(struct device *dev,
@@ -341,7 +342,7 @@ static ssize_t sysfs_MND_P_show(struct device *dev,
 }
 
 static ssize_t sysfs_MND_SET_store(struct device *dev,
-		struct device_attribute *attr, char *buf)
+		struct device_attribute *attr, const char *buf,size_t count)
 {
 	int tmp;
 	sscanf(buf, "%d", &tmp);
@@ -349,20 +350,20 @@ static ssize_t sysfs_MND_SET_store(struct device *dev,
 		vibe_set_pwm_freq(g_nlra_gp_clk_d);
 		ImmVibeSPI_ForceOut_AmpEnable(0);
 	}
-	return 1;
+	return count;
 }
 
 static ssize_t sysfs_MND_CLK_store(struct device *dev,
-		struct device_attribute *attr, char *buf)
+		struct device_attribute *attr, const char *buf,size_t count)
 {
 	int tmp;
 	sscanf(buf, "%d", &tmp);
 	if (tmp == 1) {
 		clk_enable(vib_clk);
-		return sprintf(buf, "[VIB]vib_clk ON\n");
+		return count;
 	}
 	clk_disable(vib_clk);
-	return sprintf(buf, "[VIB]vib_clk OFF\n");
+	return count;
 }
 
 static DEVICE_ATTR(MND_M, 0664 , sysfs_MND_M_show, sysfs_MND_M_store);
@@ -445,12 +446,28 @@ static __devinit int tspdrv_probe(struct platform_device *pdev)
 		printk(KERN_DEBUG "[VIB] android vib clk is successful\n");
 
 	sec_vibetonz = device_create(sec_class, NULL, 0, NULL, "sec_vibetonz");
-	device_create_file(sec_vibetonz, &dev_attr_MND_M);
-	device_create_file(sec_vibetonz, &dev_attr_MND_N);
-	device_create_file(sec_vibetonz, &dev_attr_MND_D);
-	device_create_file(sec_vibetonz, &dev_attr_MND_P);
-	device_create_file(sec_vibetonz, &dev_attr_MND_SET);
-	device_create_file(sec_vibetonz, &dev_attr_MND_CLK);
+	ret = device_create_file(sec_vibetonz, &dev_attr_MND_M);
+	if(ret)
+		pr_err("Failed to create /sys/class/sec/set_vibetonz/MND_M");
+	ret = device_create_file(sec_vibetonz, &dev_attr_MND_N);
+	if(ret)
+                pr_err("Failed to create /sys/class/sec/set_vibetonz/MND_N");
+
+	ret = device_create_file(sec_vibetonz, &dev_attr_MND_D);
+	if(ret)
+                pr_err("Failed to create /sys/class/sec/set_vibetonz/MND_D");
+
+	ret = device_create_file(sec_vibetonz, &dev_attr_MND_P);
+	if(ret)
+               pr_err("Failed to create /sys/class/sec/set_vibetonz/MND_P");
+
+	ret = device_create_file(sec_vibetonz, &dev_attr_MND_SET);
+	if(ret)
+               pr_err("Failed to create /sys/class/sec/set_vibetonz/MND_SET");
+
+	ret = device_create_file(sec_vibetonz, &dev_attr_MND_CLK);
+	if(ret)
+               pr_err("Failed to create /sys/class/sec/set_vibetonz/MND_CLK");
 
 	vibetonz_start();
 
@@ -551,16 +568,16 @@ static ssize_t write(struct file *file, const char *buf, size_t count,
 		return 0;
 	}
 
+	/* Check buffer size */
+	if ((count <= SPI_HEADER_SIZE) || (count > SPI_BUFFER_SIZE)) {
+		DbgOut((KERN_ERR "tspdrv: invalid write buffer size.\n"));
+		return 0;
+	}
+
 	/* Copy immediately the input buffer */
 	if (0 != copy_from_user(g_cwrite_buffer, buf, count)) {
 		/* Failed to copy all the data, exit */
 		DbgOut((KERN_ERR "tspdrv: copy_from_user failed.\n"));
-		return 0;
-	}
-
-	/* Check buffer size */
-	if ((count <= SPI_HEADER_SIZE) || (count > SPI_BUFFER_SIZE)) {
-		DbgOut((KERN_ERR "tspdrv: invalid write buffer size.\n"));
 		return 0;
 	}
 

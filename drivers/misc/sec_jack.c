@@ -125,10 +125,10 @@ struct adc_range {
 	int start;
 	int end;
 } adc_range_rev9[] = {
-	{0, 620}, {621, 1700}, {1701, 9999}, {0, 140}, {141, 222}, {223, 450}
+	{0, 620}, {621, 1700}, {1701, 9999}, {0, 106}, {107, 222}, {223, 450}
 },
 	adc_range_rev1_8[] = {
-	{0, 620}, {621, 1700}, {1701, 9999}, {0, 140}, {141, 222}, {223, 450}
+	{0, 620}, {621, 1700}, {1701, 9999}, {0, 106}, {107, 222}, {223, 450}
 };
 
 struct adc_range *adc_range;
@@ -508,6 +508,13 @@ static void earbutton_work(struct work_struct *work)
 	printk("adc : %d, earbutton_pressed : %d", adc , earbutton_pressed);
 	atomic_set(&hi->btn_state, earbutton_pressed);
 	if (earbutton_pressed == 1) {
+#ifdef CONFIG_MACH_ICON
+		if (adc >= adc_range[5].start && adc <= adc_range[5].end)
+			hi->pressed_btn = KEY_VOLUMEDOWN;
+		else if (adc >= adc_range[4].start && adc <= adc_range[4].end)
+			hi->pressed_btn = KEY_VOLUMEUP;
+		else
+#endif
 		if (adc >= adc_range[3].start && adc <= adc_range[3].end)
 			hi->pressed_btn = KEY_MEDIA;
 		else

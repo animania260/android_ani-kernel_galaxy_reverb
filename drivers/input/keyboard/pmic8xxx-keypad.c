@@ -27,6 +27,12 @@
 #include <linux/mfd/pmic8058.h>
 #include <linux/gpio.h>
 
+#define VOLUME_KEY_DEBOUNCE
+#ifdef VOLUME_KEY_DEBOUNCE
+#include <linux/hrtimer.h>
+#include <linux/wakelock.h>
+#endif
+
 #if CONFIG_SEC_DEBUG
 #include <mach/sec_debug.h>
 #endif
@@ -125,6 +131,13 @@ struct pmic8xxx_kp {
 	u16 stuckstate[PM8XXX_MAX_ROWS];
 
 	u8 ctrl_reg;
+
+#ifdef VOLUME_KEY_DEBOUNCE
+	struct hrtimer volup_hrtimer, voldown_hrtimer;
+	ktime_t volume_key_debounce;
+	struct wake_lock volkey_wake_lock;
+	int volkey_wake_lock_timeout;
+#endif
 };
 
 static ssize_t sysfs_key_pressed_show(struct device *dev,
@@ -576,6 +589,120 @@ static void pmic8xxx_kp_close(struct input_dev *dev)
 static unsigned short volup_matrix;
 static unsigned short voldown_matrix;
 
+#ifdef VOLUME_KEY_DEBOUNCE
+static int volup_level[2], voldown_level[2];
+static int volup_pre_state = -1, voldown_pre_state = -1;
+
+static enum hrtimer_restart pmic8058_volume_up_debounce(struct hrtimer *timer)
+{
+	int code = 0;
+	struct pmic8xxx_kp *kp = container_of(timer, struct pmic8xxx_kp,
+								volup_hrtimer);
+
+	volup_level[1] = gpio_get_value_cansleep(PM8058_GPIO_PM_TO_SYS(
+					PMIC_GPIO_VOLUME_UPKEY));
+
+	if (volup_level[0] == volup_level[1] &&
+			volup_pre_state != volup_level[1]){
+		volup_pre_state = volup_level[1];
+
+		code = MATRIX_SCAN_CODE((volup_matrix>>8),
+				(volup_matrix&0xFF), PM8058_ROW_SHIFT);
+
+#ifndef CONFIG_PRODUCT_SHIP
+		printk(KERN_ERR "%s : keycode [%d] %s\n", __func__,
+				kp->keycodes[code],
+				!volup_level[1] ? "pressed" : "released");
+#endif
+
+		input_event(kp->input, EV_MSC, MSC_SCAN, code);
+		input_report_key(kp->input, kp->keycodes[code],
+					!volup_level[1]);
+		input_sync(kp->input);
+
+#if CONFIG_SEC_DEBUG
+		sec_debug_check_crash_key(KEY_VOLUMEUP, !volup_level[1]);
+#endif
+	} else {
+		printk(KERN_ERR "%s : %d %d %d\n", __func__, volup_pre_state,
+				volup_level[0], volup_level[1]);
+	}
+	return HRTIMER_NORESTART;
+}
+
+static enum hrtimer_restart pmic8058_volume_down_debounce(struct hrtimer *timer)
+{
+	int code = 0;
+	struct pmic8xxx_kp *kp = container_of(timer, struct pmic8xxx_kp,
+							voldown_hrtimer);
+
+	voldown_level[1] = gpio_get_value_cansleep(PM8058_GPIO_PM_TO_SYS(
+						PMIC_GPIO_VOLUME_DOWNKEY));
+
+	if (voldown_level[0] == voldown_level[1] &&
+				voldown_pre_state != voldown_level[1]){
+		voldown_pre_state = voldown_level[1];
+
+		code = MATRIX_SCAN_CODE((voldown_matrix>>8),
+				(voldown_matrix&0xFF), PM8058_ROW_SHIFT);
+
+#ifndef CONFIG_PRODUCT_SHIP
+		printk(KERN_ERR "%s : keycode [%d] %s\n", __func__,
+				kp->keycodes[code],
+				!voldown_level[1] ? "pressed" : "released");
+#endif
+
+		input_event(kp->input, EV_MSC, MSC_SCAN, code);
+		input_report_key(kp->input, kp->keycodes[code],
+					!voldown_level[1]);
+		input_sync(kp->input);
+
+#if CONFIG_SEC_DEBUG
+		sec_debug_check_crash_key(KEY_VOLUMEDOWN, !voldown_level[1]);
+#endif
+	} else {
+		printk(KERN_ERR "%s : %d %d %d\n", __func__, voldown_pre_state,
+				voldown_level[0], voldown_level[1]);
+	}
+	return HRTIMER_NORESTART;
+}
+
+static irqreturn_t pmic8058_volume_up_irq(int irq, void *data)
+{
+	struct pmic8xxx_kp *kp = data;
+
+#ifndef CONFIG_PRODUCT_SHIP
+	printk(KERN_ERR "%s\n", __func__);
+#endif
+
+	volup_level[0] = gpio_get_value_cansleep(PM8058_GPIO_PM_TO_SYS(
+						PMIC_GPIO_VOLUME_UPKEY));
+
+	hrtimer_start(&kp->volup_hrtimer, kp->volume_key_debounce,
+				HRTIMER_MODE_REL);
+	wake_lock_timeout(&kp->volkey_wake_lock, kp->volkey_wake_lock_timeout);
+
+	return IRQ_HANDLED;
+}
+
+static irqreturn_t pmic8058_volume_down_irq(int irq, void *data)
+{
+	struct pmic8xxx_kp *kp = data;
+
+#ifndef CONFIG_PRODUCT_SHIP
+	printk(KERN_ERR "%s\n", __func__);
+#endif
+
+	voldown_level[0] = gpio_get_value_cansleep(PM8058_GPIO_PM_TO_SYS(
+						PMIC_GPIO_VOLUME_DOWNKEY));
+
+	hrtimer_start(&kp->voldown_hrtimer, kp->volume_key_debounce,
+					HRTIMER_MODE_REL);
+	wake_lock_timeout(&kp->volkey_wake_lock, kp->volkey_wake_lock_timeout);
+
+	return IRQ_HANDLED;
+}
+#else
 static irqreturn_t pmic8058_volume_up_irq(int irq, void *data)
 {
 	struct pmic8xxx_kp *kp = data;
@@ -656,6 +783,7 @@ static irqreturn_t pmic8058_volume_down_irq(int irq, void *data)
 
 	return IRQ_HANDLED;
 }
+#endif
 
 #if defined CONFIG_MACH_VITAL2REFRESH
 static irqreturn_t hall_ic_irq(int irq, void *data)
@@ -728,6 +856,10 @@ static int __devinit pmic8xxx_kp_probe(struct platform_device *pdev)
 		.function	= PM_GPIO_FUNC_NORMAL,
 		.inv_int_pol	= 1,
 	};
+
+#ifdef VOLUME_KEY_DEBOUNCE
+	struct timespec volkey_wakelock_timespec;
+#endif
 
 
 	if (!pdata || !pdata->num_cols || !pdata->num_rows ||
@@ -872,6 +1004,25 @@ static int __devinit pmic8xxx_kp_probe(struct platform_device *pdev)
 		goto err_pmic_reg_read;
 	}
 
+#ifdef VOLUME_KEY_DEBOUNCE
+	hrtimer_init(&kp->volup_hrtimer, CLOCK_MONOTONIC,
+					HRTIMER_MODE_REL);
+
+	hrtimer_init(&kp->voldown_hrtimer, CLOCK_MONOTONIC,
+					HRTIMER_MODE_REL);
+
+	kp->volup_hrtimer.function = pmic8058_volume_up_debounce;
+	kp->voldown_hrtimer.function = pmic8058_volume_down_debounce;
+	kp->volume_key_debounce = ktime_set(0, 5000000); /* 5ms */
+
+	wake_lock_init(&kp->volkey_wake_lock, WAKE_LOCK_SUSPEND,
+					"volkey_wake_lock");
+	volkey_wakelock_timespec = ktime_to_timespec(kp->volume_key_debounce);
+	kp->volkey_wake_lock_timeout =
+			timespec_to_jiffies(&volkey_wakelock_timespec)*2;
+
+#endif
+
 	rc = request_threaded_irq(MSM_GPIO_KEY_VOLUP_IRQ ,
 		NULL, pmic8058_volume_up_irq, IRQF_TRIGGER_RISING |
 		IRQF_TRIGGER_FALLING, "vol_up", kp);
@@ -963,6 +1114,12 @@ err_alloc_device:
 static int __devexit pmic8xxx_kp_remove(struct platform_device *pdev)
 {
 	struct pmic8xxx_kp *kp = platform_get_drvdata(pdev);
+
+#ifdef VOLUME_KEY_DEBOUNCE
+	hrtimer_cancel(&kp->volup_hrtimer);
+	hrtimer_cancel(&kp->voldown_hrtimer);
+	wake_lock_destroy(&kp->volkey_wake_lock);
+#endif
 
 	device_init_wakeup(&pdev->dev, 0);
 	free_irq(kp->key_stuck_irq, kp);

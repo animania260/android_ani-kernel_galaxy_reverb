@@ -569,7 +569,6 @@ s5k5ccg_sensor_burst_write_list(struct s5k5ccg_short_t *list, char *name)
 static int s5k5ccgx_exif_iso(void)
 {
 	uint32_t iso_value = 0;
-	int err = 0;
 
 	unsigned short gain;
 
@@ -593,7 +592,6 @@ static int s5k5ccgx_exif_iso(void)
 static int s5k5ccgx_exif_shutter_speed(void)
 {
 	uint32_t shutter_speed = 0;
-	int err = 0;
 
 	unsigned short lsb, msb;
 
@@ -1498,13 +1496,10 @@ s5k5ccg_af_get_status(int type)
 static int
 s5k5ccg_af_set_mode(int type)
 {
-	unsigned short read_value;
-	int err, count;
 	int ret = 0;
 	/*int size = 0;
 	int i = 0;
 	unsigned short light = 0;*/
-	int lux = 0;
 
 	CAMDRV_DEBUG("Enter [value = %d]\n", type);
 	/*printk(KERN_DEBUG
@@ -1856,8 +1851,10 @@ s5k5ccg_set_sensor_mode(int mode)
 			s5k5ccg_sensor_write_list(s5k5ccg_preview,
 					"s5k5ccg_preview");
 #endif
-			if (sceneNight == 1 || fireWorks == 1)
+			if (sceneNight == 1)
 				msleep(300);
+			if(fireWorks ==1 )
+				msleep(800);
 		}
 		break;
 
@@ -1983,7 +1980,6 @@ s5k5ccg_sensor_init_probe(const struct msm_camera_sensor_info *data)
 {
 	int rc = 0;
 
-	unsigned short id = 0;	/*PGH FOR TEST */
 
 	sceneNight = 0;
 	fireWorks = 0;
@@ -2083,18 +2079,18 @@ cam_hw_init()
 
 	gpio_set_value(CAM_VT_nSTBY, 0); /*VT_nSTBY -> DOWN*/
 	/*mdelay(10);*/
-	mdelay(5);
+	mdelay(10); //Fix for PLM P130226-0763 - increased by 5ms
 
 	gpio_set_value(CAM_STANDBY, 1); /*STBY -> UP*/
 	udelay(15);
 
 	gpio_set_value(CAM_RESET, 1); /*REST -> UP*/
 	/*mdelay(10);*/
-	mdelay(5);
+	mdelay(10); //Fix for PLM P130226-0763 - increased by 5ms
 
 
 	vreg_enable(vreg_L16);
-	mdelay(1);
+	mdelay(4.8); //Fix for PLM P130226-0763 - increased by 3.8ms
 
 	return rc;
 }

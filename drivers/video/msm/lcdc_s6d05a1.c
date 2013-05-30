@@ -729,10 +729,26 @@ void s6d05a1_sleep_in(void)
 	/*mdelay(1);*/
 	udelay(1000);
 }
+static unsigned int recovery_boot_mode;
+static int __init current_boot_mode(char *mode)
+{
+	/*
+	*	1 is recovery booting
+	*	0 is normal booting
+	*/
 
+	if (strncmp(mode, "1", 1) == 0)
+		recovery_boot_mode = 1;
+	else
+		recovery_boot_mode = 0;
+	pr_debug("%s %s", __func__, recovery_boot_mode == 1 ?
+						"recovery" : "normal");
+	return 1;
+}
+__setup("androidboot.boot_recovery=", current_boot_mode);
 static int lcdc_s6d05a1_panel_on(struct platform_device *pdev)
 {
-	static int bring_up_condition = 1;
+	static int bring_up_condition;
 	/*unsigned size;*/
 
 	DPRINT("start %s, bring_up %d, disp_initialized %d\n",
@@ -765,7 +781,10 @@ static int lcdc_s6d05a1_panel_on(struct platform_device *pdev)
 #endif
 		}
 	}
-
+	/*Enabled backlight for recovery mode*/ 
+	if(recovery_boot_mode)
+		backlight_ic_set_brightness(0xFF);
+		
 	return 0;
 }
 
@@ -789,6 +808,7 @@ static int lcdc_s6d05a1_panel_off(struct platform_device *pdev)
 		s6d05a1_state.display_on = FALSE;
 		s6d05a1_state.disp_initialized = FALSE;
 		s6d05a1_disp_powerdown();
+  	        backlight_ic_set_brightness(0);
 		lcd_prf = 0;
 	}
 

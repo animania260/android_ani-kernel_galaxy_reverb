@@ -21,12 +21,6 @@ int32_t msm_sensor_adjust_frame_lines(struct msm_sensor_ctrl_t *s_ctrl,
 	uint16_t cur_line = 0;
 	uint16_t exp_fl_lines = 0;
 	if (s_ctrl->sensor_exp_gain_info) {
-		if (s_ctrl->prev_gain && s_ctrl->prev_line &&
-			s_ctrl->func_tbl->sensor_write_exp_gain)
-			s_ctrl->func_tbl->sensor_write_exp_gain(
-			s_ctrl,
-			s_ctrl->prev_gain,
-			s_ctrl->prev_line);
 		msm_camera_i2c_read(s_ctrl->sensor_i2c_client,
 			s_ctrl->sensor_exp_gain_info->coarse_int_time_addr,
 			&cur_line,
@@ -149,7 +143,7 @@ int32_t msm_sensor_set_fps(struct msm_sensor_ctrl_t *s_ctrl,
 		total_lines_per_frame = (uint16_t)
 			((s_ctrl->curr_frame_length_lines) *
 			s_ctrl->fps_divider/Q10);
-
+		total_lines_per_frame += (total_lines_per_frame & 0x1);
 		rc = msm_camera_i2c_write(s_ctrl->sensor_i2c_client,
 			s_ctrl->sensor_output_reg_addr->frame_length_lines,
 			total_lines_per_frame, MSM_CAMERA_I2C_WORD_DATA);
@@ -306,7 +300,8 @@ int32_t msm_sensor_set_sensor_mode(struct msm_sensor_ctrl_t *s_ctrl,
 			s_ctrl->msm_sensor_reg->
 			output_settings[res].line_length_pclk;
 
-		if (s_ctrl->sensordata->pdata->is_csic)
+		if (s_ctrl->sensordata->pdata->is_csic ||
+			!s_ctrl->sensordata->csi_if)
 			rc = s_ctrl->func_tbl->sensor_csi_setting(s_ctrl,
 				MSM_SENSOR_UPDATE_PERIODIC, res);
 		else
@@ -332,7 +327,8 @@ int32_t msm_sensor_mode_init(struct msm_sensor_ctrl_t *s_ctrl,
 		s_ctrl->curr_res = MSM_SENSOR_INVALID_RES;
 		s_ctrl->cam_mode = mode;
 
-		if (s_ctrl->sensordata->pdata->is_csic)
+		if (s_ctrl->sensordata->pdata->is_csic ||
+			!s_ctrl->sensordata->csi_if)
 			rc = s_ctrl->func_tbl->sensor_csi_setting(s_ctrl,
 				MSM_SENSOR_REG_INIT, 0);
 		else
@@ -356,24 +352,6 @@ int32_t msm_sensor_get_output_info(struct msm_sensor_ctrl_t *s_ctrl,
 	return rc;
 }
 
-int32_t msm_sensor_release(struct msm_sensor_ctrl_t *s_ctrl)
-{
-	long fps = 0;
-	uint32_t delay = 0;
-	CDBG("%s called\n", __func__);
-	s_ctrl->func_tbl->sensor_stop_stream(s_ctrl);
-	if (s_ctrl->curr_res != MSM_SENSOR_INVALID_RES) {
-		fps = s_ctrl->msm_sensor_reg->
-			output_settings[s_ctrl->curr_res].vt_pixel_clk /
-			s_ctrl->curr_frame_length_lines /
-			s_ctrl->curr_line_length_pclk;
-		delay = 1000 / fps;
-		CDBG("%s fps = %ld, delay = %d\n", __func__, fps, delay);
-		msleep(delay);
-	}
-	return 0;
-}
-
 long msm_sensor_subdev_ioctl(struct v4l2_subdev *sd,
 			unsigned int cmd, void *arg)
 {
@@ -382,8 +360,6 @@ long msm_sensor_subdev_ioctl(struct v4l2_subdev *sd,
 	switch (cmd) {
 	case VIDIOC_MSM_SENSOR_CFG:
 		return s_ctrl->func_tbl->sensor_config(s_ctrl, argp);
-	case VIDIOC_MSM_SENSOR_RELEASE:
-		return msm_sensor_release(s_ctrl);
 	default:
 		return -ENOIOCTLCMD;
 	}
@@ -426,8 +402,6 @@ int32_t msm_sensor_config(struct msm_sensor_ctrl_t *s_ctrl, void __user *argp)
 					s_ctrl,
 					cdata.cfg.exp_gain.gain,
 					cdata.cfg.exp_gain.line);
-			s_ctrl->prev_gain = cdata.cfg.exp_gain.gain;
-			s_ctrl->prev_line = cdata.cfg.exp_gain.line;
 			break;
 
 		case CFG_SET_PICT_EXP_GAIN:
@@ -659,7 +633,8 @@ int32_t msm_sensor_i2c_probe(struct i2c_client *client,
 	struct msm_sensor_ctrl_t *s_ctrl;
 	CDBG("%s_i2c_probe called\n", client->name);
 	if (!i2c_check_functionality(client->adapter, I2C_FUNC_I2C)) {
-		CDBG("i2c_check_functionality failed\n");
+		pr_err("%s %s i2c_check_functionality failed\n",
+			__func__, client->name);
 		rc = -EFAULT;
 		return rc;
 	}
@@ -671,19 +646,23 @@ int32_t msm_sensor_i2c_probe(struct i2c_client *client,
 			s_ctrl->sensor_i2c_client->client->addr =
 				s_ctrl->sensor_i2c_addr;
 	} else {
+		pr_err("%s %s sensor_i2c_client NULL\n",
+			__func__, client->name);
 		rc = -EFAULT;
 		return rc;
 	}
 
 	s_ctrl->sensordata = client->dev.platform_data;
 	if (s_ctrl->sensordata == NULL) {
-		pr_err("%s: NULL sensor data\n", __func__);
+		pr_err("%s %s NULL sensor data\n", __func__, client->name);
 		return -EFAULT;
 	}
 
 	rc = s_ctrl->func_tbl->sensor_power_up(s_ctrl);
-	if (rc < 0)
-		goto probe_fail;
+	if (rc < 0) {
+		pr_err("%s %s power up failed\n", __func__, client->name);
+		return rc;
+	}
 
 	if (s_ctrl->func_tbl->sensor_match_id)
 		rc = s_ctrl->func_tbl->sensor_match_id(s_ctrl);
@@ -719,7 +698,7 @@ int32_t msm_sensor_i2c_probe(struct i2c_client *client,
 	msm_sensor_register(&s_ctrl->sensor_v4l2_subdev);
 	goto power_down;
 probe_fail:
-	pr_err("%s_i2c_probe failed\n", client->name);
+	pr_err("%s %s_i2c_probe failed\n", __func__, client->name);
 power_down:
 	if (rc > 0)
 		rc = 0;
@@ -732,30 +711,10 @@ int32_t msm_sensor_power(struct v4l2_subdev *sd, int on)
 	int rc = 0;
 	struct msm_sensor_ctrl_t *s_ctrl = get_sctrl(sd);
 	mutex_lock(s_ctrl->msm_sensor_mutex);
-	if (on) {
+	if (on)
 		rc = s_ctrl->func_tbl->sensor_power_up(s_ctrl);
-		if (rc < 0) {
-			pr_err("%s: %s power_up failed rc = %d\n", __func__,
-				s_ctrl->sensordata->sensor_name, rc);
-		} else {
-			if (s_ctrl->func_tbl->sensor_match_id)
-				rc = s_ctrl->func_tbl->sensor_match_id(s_ctrl);
-			else
-				rc = msm_sensor_match_id(s_ctrl);
-			if (rc < 0) {
-				pr_err("%s: %s match_id failed rc=%d\n",
-					__func__,
-					s_ctrl->sensordata->sensor_name, rc);
-				if (s_ctrl->func_tbl->sensor_power_down(s_ctrl)
-					< 0)
-					pr_err("%s: %s power_down failed\n",
-					__func__,
-					s_ctrl->sensordata->sensor_name);
-			}
-		}
-	} else {
+	else
 		rc = s_ctrl->func_tbl->sensor_power_down(s_ctrl);
-	}
 	mutex_unlock(s_ctrl->msm_sensor_mutex);
 	return rc;
 }

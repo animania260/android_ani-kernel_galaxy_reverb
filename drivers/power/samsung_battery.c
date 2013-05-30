@@ -54,6 +54,8 @@
 #include <linux/mfd/pmic8058.h>
 #include <linux/wakelock.h>
 
+#include <linux/pm.h>
+
 #include <mach/vreg.h>
 
 #ifdef CONFIG_LEDS_PMIC8058
@@ -308,6 +310,98 @@ const int temp_table[][2] = {
 	{	425,	580	},
 	{	429,	590	},
 	{	431,	600	},
+#elif defined(CONFIG_MACH_RAY)
+	{	14,	-250	},
+	{	16,	-240	},
+	{	18,	-230	},
+	{	20,	-220	},
+	{	23,	-210	},
+	{	26,	-200	},
+	{	29,	-190	},
+	{	32,	-180	},
+	{	35,	-170	},
+	{	38,	-160	},
+	{	42,	-150	},
+	{	46,	-140	},
+	{	51,	-130	},
+	{	56,	-120	},
+	{	61,	-110	},
+	{	66,	-100	},
+	{	69,	-90	},
+	{	72,	-80	},
+	{	75,	-70	},
+	{	78,	-60	},
+	{	82,	-50	},
+	{	87,	-40	},
+	{	92,	-30	},
+	{	97,	-20	},
+	{	102,	-10	},
+	{	108,	0	},
+	{	112,	10	},
+	{	116,	20	},
+	{	120,	30	},
+	{	124,	40	},
+	{	128,	50	},
+	{	134,	60	},
+	{	140,	70	},
+	{	146,	80	},
+	{	152,	90	},
+	{	158,	100	},
+	{	167,	110	},
+	{	177,	120	},
+	{	187,	130	},
+	{	197,	140	},
+	{	207,	150	},
+	{	212,	160	},
+	{	217,	170	},
+	{	223,	180	},
+	{	229,	190	},
+	{	235,	200	},
+	{	239,	210	},
+	{	243,	220	},
+	{	248,	230	},
+	{	253,	240	},
+	{	258,	250	},
+	{	264,	260	},
+	{	270,	270	},
+	{	277,	280	},
+	{	284,	290	},
+	{	290,	300	},
+	{	295,	310	},
+	{	300,	320	},
+	{	305,	330	},
+	{	310,	340	},
+	{	316,	350	},
+	{	321,	360	},
+	{	327,	370	},
+	{	333,	380	},
+	{	339,	390	},
+	{	345,	400	},
+	{	349,	410	},
+	{	353,	420	},
+	{	357,	430	},
+	{	361,	440	},
+	{	366,	450	},
+	{	369,	460	},
+	{	372,	470	},
+	{	376,	480	},
+	{	380,	490	},
+	{	383,	500	},
+	{	387,	510	},
+	{	391,	520	},
+	{	395,	530	},
+	{	399,	540	},
+	{	404,	550	},
+	{	408,	560	},
+	{	412,	570	},
+	{	417,	580	},
+	{	421,	590	},
+	{	425,	600	},
+	{	428,	610	},
+	{	431,	620	},
+	{	434,	630	},
+	{	437,	640	},
+	{	440,	650	},
 #else
 	{ 30,		-300	},
 	{ 33,		-290	},
@@ -423,7 +517,8 @@ const int temp_table[][2] = {
 #define TOTAL_CHARGING_TIME	(1 * TIME_UNIT_MINUTE)
 #define TOTAL_RECHARGING_TIME	(1 * TIME_UNIT_MINUTE)
 #else
-#if defined(CONFIG_MACH_PREVAIL2) || defined(CONFIG_MACH_ICON)
+#if defined(CONFIG_MACH_PREVAIL2) || defined(CONFIG_MACH_ICON)\
+|| defined(CONFIG_MACH_RAY)
 #define TOTAL_CHARGING_TIME	(6 * TIME_UNIT_HOUR)
 #else/*vital2 refresh*/
 #define TOTAL_CHARGING_TIME	(5 * TIME_UNIT_HOUR)
@@ -448,6 +543,18 @@ const int temp_table[][2] = {
 #define BATT_TEMP_LOW_BLOCK_LPM	89
 #define BATT_TEMP_LOW_RECOVER_LPM	102
 
+#elif defined(CONFIG_MACH_RAY)
+
+#define BATT_TEMP_EVENT_BLOCK		431
+#define BATT_TEMP_HIGH_BLOCK		399
+#define BATT_TEMP_HIGH_RECOVER		358
+#define BATT_TEMP_LOW_BLOCK		85
+#define BATT_TEMP_LOW_RECOVER		110
+
+#define BATT_TEMP_HIGH_BLOCK_LPM	379
+#define BATT_TEMP_HIGH_RECOVER_LPM	376
+#define BATT_TEMP_LOW_BLOCK_LPM	88
+#define BATT_TEMP_LOW_RECOVER_LPM	91
 
 #elif defined(CONFIG_MACH_ICON)
 
@@ -496,13 +603,13 @@ const int temp_table[][2] = {
 #define CHARGING_ALARM_INTERVAL	(40)
 
 #if defined(CONFIG_MACH_ICON)
-#define BATT_FULL_CHARGING_VOLTAGE	4340
+#define BATT_FULL_CHARGING_VOLTAGE	4150
 #define BATT_FULL_CHARGING_CURRENT	710
 
 #define BATT_RECHARGING_VOLTAGE_1	4300 /*4130*/
 #define BATT_RECHARGING_VOLTAGE_2	4150
-#elif defined(CONFIG_MACH_PREVAIL2)
-#define BATT_FULL_CHARGING_VOLTAGE	4190
+#elif defined(CONFIG_MACH_PREVAIL2) || defined(CONFIG_MACH_RAY)
+#define BATT_FULL_CHARGING_VOLTAGE	4000
 #define BATT_FULL_CHARGING_CURRENT	500
 
 #define BATT_RECHARGING_VOLTAGE_1	4128
@@ -746,6 +853,7 @@ struct msm_battery_info {
 	bool factory_mode;
 	unsigned int check_full_state_cnt;
 	unsigned int full_check_count;
+	bool check_cable_change;
 };
 
 static struct msm_battery_info msm_batt_info = {
@@ -1524,8 +1632,8 @@ static void msm_batt_chg_en(chg_enable_type enable)
 			hsusb_chg_vbus_draw(600);
 		#else
 		#if defined(CONFIG_MACH_ICON)
-			smb328a_charger_control(900, 150, 1, 0);
-		#else /*PREVAIL2*/
+			smb328a_charger_control(900, 125, 1, 0);
+		#else /*PREVAIL2, RAY*/
 			smb328a_charger_control(1000, 150, 1, 0);
 		#endif
 		#endif
@@ -1543,8 +1651,8 @@ static void msm_batt_chg_en(chg_enable_type enable)
 				hsusb_chg_vbus_draw(600);
 			#else
 				#if defined(CONFIG_MACH_ICON)
-				smb328a_charger_control(900, 150, 1, 1);
-				#else /*PREVAIL2*/
+				smb328a_charger_control(900, 125, 1, 1);
+				#else /*PREVAIL2, RAY*/
 				smb328a_charger_control(1000, 150, 1, 1);
 				#endif
 			#endif
@@ -1556,7 +1664,7 @@ static void msm_batt_chg_en(chg_enable_type enable)
 				/* USB charging   (400mA) */
 			#else
 				#if defined(CONFIG_MACH_ICON)
-				smb328a_charger_control(500, 150, 1, 0);
+				smb328a_charger_control(500, 125, 1, 0);
 				#else
 				smb328a_charger_control(500, 150, 1, 0);
 				#endif
@@ -1592,7 +1700,7 @@ static void msm_batt_chg_en(chg_enable_type enable)
 			hsusb_chg_vbus_draw(0);	/* discharging */
 	#else
 		#if defined(CONFIG_MACH_ICON)
-		smb328a_charger_control(0, 150, 0, 0);
+		smb328a_charger_control(0, 125, 0, 0);
 		#else
 		smb328a_charger_control(0, 150, 0, 0);
 		#endif
@@ -1600,8 +1708,8 @@ static void msm_batt_chg_en(chg_enable_type enable)
 		msm_batt_average_chg_current(-1);
 		/* Initialize all current data sampling */
 
-		pr_info("[BATT] %s: Stop charging! "
-			"(charging_source = 0x%x, full_check = %d)\n",
+		pr_info("[BATT] %s: Stop charging! "\
+			"(charging_source = 0x%x, full_check = %d)\n",\
 			__func__, msm_batt_info.charging_source,
 			     msm_batt_info.batt_full_check);
 
@@ -1698,8 +1806,6 @@ static int msm_batt_average_chg_current(int chg_current_adc)
 
 static int msm_batt_check_full_charging(int chg_current_adc)
 {
-	static unsigned int time_after_under_tsh;
-
 	unsigned long charging_time;
 	ktime_t	current_time;
 	struct timespec ts;
@@ -1708,7 +1814,8 @@ static int msm_batt_check_full_charging(int chg_current_adc)
 	current_time = alarm_get_elapsed_realtime();
 	ts = ktime_to_timespec(current_time);
 
-#if defined(CONFIG_MACH_ICON) || defined(CONFIG_MACH_PREVAIL2)
+#if defined(CONFIG_MACH_ICON) || defined(CONFIG_MACH_PREVAIL2)\
+|| defined(CONFIG_MACH_RAY)
 	full_current_condtion = smb328a_check_bat_full();
 	pr_info("%s: full_current_condtion = %d\n",
 		__func__, full_current_condtion);
@@ -1728,7 +1835,7 @@ static int msm_batt_check_full_charging(int chg_current_adc)
 	}
 
 	msm_batt_info.charging_passed_time = charging_time;
-	pr_info("%s: start_time = %u, chg_passed_time = %u\n", __func__,
+	pr_info("%s: start_time = %lu, chg_passed_time = %lu\n", __func__,
 		msm_batt_info.charging_start_time,
 		msm_batt_info.charging_passed_time);
 
@@ -1746,12 +1853,13 @@ static int msm_batt_check_full_charging(int chg_current_adc)
 		return 1;
 	}
 
-#if defined(CONFIG_MACH_ICON) || defined(CONFIG_MACH_PREVAIL2)
+#if defined(CONFIG_MACH_ICON) || defined(CONFIG_MACH_PREVAIL2)\
+|| defined(CONFIG_MACH_RAY)
 	if (msm_batt_info.battery_voltage >= BATT_FULL_CHARGING_VOLTAGE) {
 		if (full_current_condtion == true) {
 			/* fully charged !*/
-			pr_info("[BATT] %s: Fully charged, "
-				"cut off charging current! "
+			pr_info("[BATT] %s: Fully charged, "\
+				"cut off charging current! "\
 				"(voltage=%d, ICHG=%d)\n",
 				__func__, msm_batt_info.battery_voltage,
 				chg_current_adc);
@@ -1782,8 +1890,8 @@ static int msm_batt_check_full_charging(int chg_current_adc)
 
 			if (msm_batt_info.full_check_count >= 3) {
 					/* fully charged !*/
-					pr_info("[BATT] %s: Fully charged, "
-					"cut off charging current! "
+					pr_info("[BATT] %s: Fully charged, "\
+					"cut off charging current! "\
 					"(voltage=%d, ICHG=%d)\n",
 					__func__, msm_batt_info.battery_voltage,
 					chg_current_adc);
@@ -1980,6 +2088,7 @@ static int led_toggle = 1;
 static int new_led_status;
 static int pre_led_status;
 
+#ifndef BATT_LED_CONTROL_DISABLE
 static void msm_batt_led_control(void)
 {
 	int rc1 = 0, rc2 = 0;
@@ -2053,6 +2162,7 @@ static void msm_batt_led_control(void)
 			__func__, rc1, rc2);
 	}
 }
+#endif
 
 static enum hrtimer_restart led_timer_func(struct hrtimer *timer)
 {
@@ -2245,8 +2355,8 @@ static int msm_batt_control_temperature(u32 temp_adc)
 		if (prev_health != new_health) {
 			if (msm_batt_info.charging_source == NO_CHG) {
 				/* not charging */
-				pr_info("[BATT] %s: "
-					"Health changed by temperature!"
+				pr_info("[BATT] %s: "\
+					"Health changed by temperature!"\
 					"(ADC = %d, %s-> %s)\n", __func__,
 					temp_adc, health_text[prev_health],
 					health_text[new_health]);
@@ -2255,7 +2365,7 @@ static int msm_batt_control_temperature(u32 temp_adc)
 			} else {	/* in charging */
 				if (new_health != POWER_SUPPLY_HEALTH_GOOD) {
 					/* block! */
-					pr_info("[BATT] %s: Block charging!"
+					pr_info("[BATT] %s: Block charging!"\
 						"(ADC = %d, %s-> %s)\n",
 						__func__, temp_adc,
 						health_text[prev_health],
@@ -2265,7 +2375,7 @@ static int msm_batt_control_temperature(u32 temp_adc)
 					msm_batt_chg_en(STOP_CHARGING);
 				} else if (msm_batt_info.batt_full_check == 0) {
 					/* recover!*/
-					pr_info("[BATT] %s: Recover charging!"
+					pr_info("[BATT] %s: Recover charging!"\
 						"(ADC = %d, %s-> %s)\n",
 						__func__, temp_adc,
 						health_text[prev_health],
@@ -2304,6 +2414,7 @@ static int msm_batt_get_batt_chg_status(void)
 		ONCRPC_CHG_GET_GENERAL_STATUS_PROC,
 		&req_batt_chg, sizeof(req_batt_chg), &rep_batt_chg,
 		sizeof(rep_batt_chg), msecs_to_jiffies(BATT_RPC_TIMEOUT));
+
 	if (rc < 0) {
 		pr_err("%s: ERROR. msm_rpc_call_reply failed! proc=%d rc=%d\n",
 			__func__, ONCRPC_CHG_GET_GENERAL_STATUS_PROC, rc);
@@ -2453,8 +2564,14 @@ static void msm_batt_update_psy_status(void)
 	/* check temperature */
 	msm_batt_info.battery_temp_adc =
 	    msm_batt_average_temperature(battery_temp_adc);
-	status_changed += msm_batt_control_temperature
+	if (msm_batt_info.check_cable_change == false) {
+		status_changed += msm_batt_control_temperature
 				(msm_batt_info.battery_temp_adc);
+	} else {
+		msm_batt_info.check_cable_change = false;
+		pr_info("%s: Skip temp check at cable attach/detach\n",
+			__func__);
+	}
 
 	/* RCOMP update depending on temperature */
 #ifdef CONFIG_MACH_ICON
@@ -2464,14 +2581,13 @@ static void msm_batt_update_psy_status(void)
 	/* check full charging */
 	msm_batt_info.chg_current_adc =
 		msm_batt_average_chg_current(chg_current_adc);
-	status_changed += msm_batt_check_full_charging
-				(msm_batt_info.chg_current_adc);
+	msm_batt_check_full_charging(msm_batt_info.chg_current_adc);
 
 	/* check recharging */
-	msm_batt_check_recharging();
+	status_changed += msm_batt_check_recharging();
 
 	/* battery level, capacity (%) */
-	msm_batt_check_level(battery_level);
+	status_changed += msm_batt_check_level(battery_level);
 
 	/* temperature health for power off charging */
 	if (msm_batt_info.batt_health == POWER_SUPPLY_HEALTH_GOOD)
@@ -2479,17 +2595,18 @@ static void msm_batt_update_psy_status(void)
 	else
 		msm_batt_info.batt_temp_check = 0;
 
-	pr_info("[BATT] %s: Voltage=%d, Soc = %d, temperature = %d, "
-		"current = %d, Source = %d, Health = %d, status = %d\n",
+	pr_info("[BATT] %s: Voltage=%d, Soc = %d, temperature = %d, "\
+		"current = %d, status = %d, Source = %d, Health = %d\n",
 		__func__,
 		msm_batt_info.battery_voltage,
 		msm_batt_info.batt_capacity,
 		msm_batt_info.battery_temp_adc,
 		msm_batt_info.chg_current_adc,
+		msm_batt_info.batt_status,
 		msm_batt_info.charging_source,
-		msm_batt_info.batt_health,
-		msm_batt_info.batt_status);
+		msm_batt_info.batt_health);
 
+	pr_info("%s: power_supply_changed\n", __func__);
 	power_supply_changed(&msm_psy_batt);
 
 #ifndef BATT_LED_CONTROL_DISABLE  /*LED is not controlled by battery driver */
@@ -2511,10 +2628,7 @@ monitoring_skip:
 
 	sec_bat_monitoring_alarm(CHARGING_ALARM_INTERVAL);
 
-	if (likely(status_changed == 0))
-		wake_unlock(&monitor_wake_lock);
-	else
-		wake_lock_timeout(&monitor_wake_lock, (3 * HZ));
+	wake_unlock(&monitor_wake_lock);
 
 	return;
 }
@@ -3031,7 +3145,7 @@ void msm_set_cable(struct msm_battery_callback *ptr,
 static void msm_batt_cable_status_update(void)
 {
 	struct msm_battery_info *chg = &msm_batt_info;
-
+	u32 cable_status_prev_batt_health;
 	static char *health_text[] = {
 		"Unknown", "Good", "Overheat", "Dead",
 		"Over voltage", "Unspecified failure", "Cold",
@@ -3060,8 +3174,12 @@ static void msm_batt_cable_status_update(void)
 			|| (chg->cable_status == CABLE_TYPE_UART)) {
 		pr_debug("%s: ovp_en=%d\n", __func__, ovp_en);
 		if (fsa9485_vbus_valid()) {
-			if (msm_batt_info.batt_health !=
-				POWER_SUPPLY_HEALTH_UNSPEC_FAILURE)
+			if ((msm_batt_info.batt_health !=
+				POWER_SUPPLY_HEALTH_UNSPEC_FAILURE) &&
+				(msm_batt_info.batt_health !=
+				POWER_SUPPLY_HEALTH_OVERHEAT) &&
+				(msm_batt_info.batt_health !=
+				POWER_SUPPLY_HEALTH_COLD))
 				msm_batt_info.batt_health =
 					POWER_SUPPLY_HEALTH_GOOD;
 
@@ -3089,9 +3207,17 @@ static void msm_batt_cable_status_update(void)
 			msm_batt_chg_en(STOP_CHARGING);
 		}
 	} else {
-		if (msm_batt_info.batt_health !=
-			POWER_SUPPLY_HEALTH_UNSPEC_FAILURE)
+		if ((msm_batt_info.batt_health !=
+			POWER_SUPPLY_HEALTH_UNSPEC_FAILURE) &&
+			(msm_batt_info.batt_health !=
+			POWER_SUPPLY_HEALTH_OVERHEAT) &&
+			(msm_batt_info.batt_health !=
+			POWER_SUPPLY_HEALTH_COLD)) {
+			cable_status_prev_batt_health = msm_batt_info.batt_health;
 			msm_batt_info.batt_health = POWER_SUPPLY_HEALTH_GOOD;
+			pr_info("[BATT] %s: Battery health changed (%s -> %s) ",__func__,
+				health_text[cable_status_prev_batt_health],health_text[msm_batt_info.batt_health]);
+		}
 
 		if (chg->cable_status == CABLE_TYPE_USB ||
 			chg->cable_status == CABLE_TYPE_CDP) {
@@ -3141,26 +3267,19 @@ static void msm_batt_cable_status_update(void)
 		}
 	}
 
-	pr_info("[BATT] %s: power_supply_changed !\n", __func__);
+	/*pr_info("[BATT] %s: power_supply_changed !\n", __func__);
 	power_supply_changed(&msm_psy_batt);
 	power_supply_changed(&msm_psy_usb);
-	power_supply_changed(&msm_psy_ac);
+	power_supply_changed(&msm_psy_ac); */
 
-	if ((msm_batt_info.prev_cable != msm_batt_info.cable_status) ||
-		(msm_batt_info.pre_batt_status != msm_batt_info.batt_status)) {
-		queue_delayed_work(msm_batt_info.msm_batt_wq,
-			&msm_batt_info.msm_batt_work, 0);
-		pr_info("%s: status changed, work queue called\n", __func__);
-	}
+	msm_batt_info.check_cable_change = true;
+	queue_delayed_work(msm_batt_info.msm_batt_wq,
+		&msm_batt_info.msm_batt_work, 0);
+	pr_info("%s: battery work queue called\n", __func__);
 
 	msm_batt_info.prev_cable = msm_batt_info.cable_status;
 
-	if (likely(!(charging_boot &&
-		msm_batt_info.batt_status !=
-			POWER_SUPPLY_STATUS_CHARGING)))
-		wake_lock_timeout(&vbus_wake_lock, (3 * HZ));
-	else
-		wake_lock_timeout(&vbus_wake_lock, (10 * HZ));
+	wake_lock_timeout(&vbus_wake_lock, (1 * HZ));
 }
 
 /*For SMB328A related functionality*/
@@ -3201,8 +3320,12 @@ void msm_batt_cable_status_update_ext(int vbus_in)
 
 	pr_debug("%s: ovp_en=%d\n", __func__, ovp_en);
 	if (vbus_in) {
-		if (msm_batt_info.batt_health !=
-			POWER_SUPPLY_HEALTH_UNSPEC_FAILURE)
+		if ((msm_batt_info.batt_health !=
+			POWER_SUPPLY_HEALTH_UNSPEC_FAILURE) &&
+			(msm_batt_info.batt_health !=
+			POWER_SUPPLY_HEALTH_OVERHEAT) &&
+			(msm_batt_info.batt_health !=
+			POWER_SUPPLY_HEALTH_COLD))
 			msm_batt_info.batt_health =
 				POWER_SUPPLY_HEALTH_GOOD;
 
@@ -3242,28 +3365,22 @@ void msm_batt_cable_status_update_ext(int vbus_in)
 		}
 	}
 
-	pr_info("[BATT] %s: power_supply_changed !\n", __func__);
+	/*pr_info("[BATT] %s: power_supply_changed !\n", __func__);
 	power_supply_changed(&msm_psy_batt);
 	power_supply_changed(&msm_psy_usb);
-	power_supply_changed(&msm_psy_ac);
+	power_supply_changed(&msm_psy_ac);*/
 
 	pr_debug("%s: pre_batt_status = %d, batt_status = %d, chg_source=%d\n",
 		__func__, msm_batt_info.pre_batt_status,
 		msm_batt_info.batt_status, msm_batt_info.charging_source);
 
-	if (msm_batt_info.pre_batt_status != msm_batt_info.batt_status) {
-		queue_delayed_work(msm_batt_info.msm_batt_wq,
-			&msm_batt_info.msm_batt_work, 0);
-		pr_info("%s: status changed, work queue called\n", __func__);
-	}
+	msm_batt_info.check_cable_change = true;
+	queue_delayed_work(msm_batt_info.msm_batt_wq,
+		&msm_batt_info.msm_batt_work, 0);
+	pr_info("%s: battery work queue called\n", __func__);
 
 cable_update_skip:
-	if (likely(!(charging_boot &&
-		msm_batt_info.batt_status !=
-			POWER_SUPPLY_STATUS_CHARGING)))
-		wake_lock_timeout(&vbus_wake_lock, (3 * HZ));
-	else
-		wake_lock_timeout(&vbus_wake_lock, (10 * HZ));
+	wake_lock_timeout(&vbus_wake_lock, (1 * HZ));
 }
 EXPORT_SYMBOL(msm_batt_cable_status_update_ext);
 
@@ -3274,8 +3391,7 @@ int msm_batt_is_ovp(int enable)
 	if (enable == 1) {
 		if (ovp_en == 1) {
 			pr_debug("[BATT] %s: duplicated ovp_en!\n", __func__);
-			wake_unlock(&vbus_wake_lock);
-			return;
+			return 0;
 		}
 		msm_batt_info.batt_status =
 			POWER_SUPPLY_STATUS_DISCHARGING;
@@ -3288,8 +3404,7 @@ int msm_batt_is_ovp(int enable)
 	} else {
 		if (ovp_en == 0) {
 			pr_debug("[BATT] %s: duplicated ovp_dis!\n", __func__);
-			wake_unlock(&vbus_wake_lock);
-			return;
+			return 0;
 		}
 		ovp_en = 0;
 		ovp_en_handled = 1;
@@ -3305,22 +3420,22 @@ int msm_batt_is_ovp(int enable)
 
 	pr_info("[BATT] %s: power_supply_changed !\n", __func__);
 	power_supply_changed(&msm_psy_batt);
-	power_supply_changed(&msm_psy_usb);
-	power_supply_changed(&msm_psy_ac);
+	/*power_supply_changed(&msm_psy_usb);
+	power_supply_changed(&msm_psy_ac);*/
 
-	wake_lock_timeout(&vbus_wake_lock, (3 * HZ));
+	wake_lock_timeout(&vbus_wake_lock, (1 * HZ));
 }
 EXPORT_SYMBOL(msm_batt_is_ovp);
 
-static int msm_batt_suspend(struct platform_device *pdev, pm_message_t state)
+static int msm_batt_suspend(struct device *dev)
 {
-	pr_debug("[BATT] %s\n", __func__);
+	pr_info("[BATT] %s\n", __func__);
 
 	cancel_delayed_work(&msm_batt_info.msm_batt_work);
 
 	msm_batt_info.cur_monitor_time = alarm_get_elapsed_realtime();
-	pr_info("%s: cur_monitor_time = %u\n",
-		__func__, msm_batt_info.cur_monitor_time);
+	/*pr_info("%s: cur_monitor_time = %u\n",
+		__func__, msm_batt_info.cur_monitor_time);*/
 
 	if (msm_batt_info.charging_source == NO_CHG) {
 		pr_info("%s: cable_type_none\n", __func__);
@@ -3334,7 +3449,7 @@ static int msm_batt_suspend(struct platform_device *pdev, pm_message_t state)
 	return 0;
 }
 
-static int msm_batt_resume(struct platform_device *pdev)
+static void msm_batt_resume(struct device *dev)
 {
 	pr_debug("[BATT] %s\n", __func__);
 	if (msm_batt_info.slow_polling)
@@ -3345,8 +3460,6 @@ static int msm_batt_resume(struct platform_device *pdev)
 
 	queue_delayed_work(msm_batt_info.msm_batt_wq,
 		&msm_batt_info.msm_batt_work, 0);
-
-	return 0;
 }
 
 int batt_restart(void)
@@ -3674,7 +3787,7 @@ static int __devinit msm_batt_probe(struct platform_device *pdev)
 	pr_info("[BATT] %s begins\n", __func__);/*check probe works*/
 
 	if (pdev->id != -1) {
-		dev_err(&pdev->dev, "%s: MSM chipsets Can only support "
+		dev_err(&pdev->dev, "%s: MSM chipsets Can only support "\
 			"one battery ", __func__);
 		return -EINVAL;
 	}
@@ -3684,7 +3797,7 @@ static int __devinit msm_batt_probe(struct platform_device *pdev)
 	if (pdata->avail_chg_sources & AC_CHG) {
 		rc = power_supply_register(&pdev->dev, &msm_psy_ac);
 		if (rc < 0) {
-			dev_err(&pdev->dev, "%s: power_supply_register failed "
+			dev_err(&pdev->dev, "%s: power_supply_register failed "\
 				"rc = %d\n", __func__, rc);
 			msm_batt_cleanup();
 			return rc;
@@ -3696,7 +3809,7 @@ static int __devinit msm_batt_probe(struct platform_device *pdev)
 	if (pdata->avail_chg_sources & USB_CHG) {
 		rc = power_supply_register(&pdev->dev, &msm_psy_usb);
 		if (rc < 0) {
-			dev_err(&pdev->dev, "%s: power_supply_register failed "
+			dev_err(&pdev->dev, "%s: power_supply_register failed "\
 				"rc = %d\n", __func__, rc);
 			msm_batt_cleanup();
 			return rc;
@@ -3706,7 +3819,7 @@ static int __devinit msm_batt_probe(struct platform_device *pdev)
 	}
 
 	if (!msm_batt_info.msm_psy_ac && !msm_batt_info.msm_psy_usb) {
-		dev_err(&pdev->dev, "%s: No external Power supply(AC or USB) "
+		dev_err(&pdev->dev, "%s: No external Power supply(AC or USB) "\
 			"is avilable\n", __func__);
 		msm_batt_cleanup();
 		return -ENODEV;
@@ -3744,7 +3857,7 @@ static int __devinit msm_batt_probe(struct platform_device *pdev)
 	rc = msm_batt_enable_filter(VBATT_FILTER);
 
 	if (rc < 0) {
-		dev_err(&pdev->dev, "%s: msm_batt_enable_filter failed "
+		dev_err(&pdev->dev, "%s: msm_batt_enable_filter failed "\
 			"rc = %d\n", __func__, rc);
 		msm_batt_cleanup();
 		return rc;
@@ -3795,10 +3908,11 @@ static int __devinit msm_batt_probe(struct platform_device *pdev)
 	msm_batt_info.vbus_valid = 0;
 	msm_batt_info.full_check_count = 0;
 	msm_batt_info.factory_mode = false;
+	msm_batt_info.check_cable_change = false;
 
 #ifdef CONFIG_MAX17043_FUEL_GAUGE
 	if (i2c_add_driver(&fg_i2c_driver))
-		pr_err("%s : Can't add max17043 fuel gauge i2c drv"
+		pr_err("%s : Can't add max17043 fuel gauge i2c drv"\
 		"\n", __func__);
 
 	/* check_quick_start(); */
@@ -3814,6 +3928,9 @@ static int __devinit msm_batt_probe(struct platform_device *pdev)
 	/*For FSA related callback*/
 	msm_batt_info.callback.set_cable = msm_set_cable;
 
+	INIT_DELAYED_WORK_DEFERRABLE(&msm_batt_info.msm_batt_work,
+		msm_batt_check_event);
+
 	if (msm_batt_info.pdata->register_callbacks)
 		msm_batt_info.pdata->register_callbacks
 		(&msm_batt_info.callback);
@@ -3822,14 +3939,12 @@ static int __devinit msm_batt_probe(struct platform_device *pdev)
 	/*msm_batt_cable_status_update();*/
 
 #ifndef BATT_LED_CONTROL_DISABLE  /*LED is not controlled by battery driver */
-pr_info("[BATT] %s: battery led control enabled!\n", __func__);
+	pr_info("[BATT] %s: battery led control enabled!\n", __func__);
 	/* Led Toggle Timer init */
 	hrtimer_init(&LedTimer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
 	LedTimer.function = led_timer_func;
 #endif
 
-	INIT_DELAYED_WORK_DEFERRABLE(&msm_batt_info.msm_batt_work,
-		msm_batt_check_event);
 	queue_delayed_work(msm_batt_info.msm_batt_wq,
 		&msm_batt_info.msm_batt_work, 0);
 

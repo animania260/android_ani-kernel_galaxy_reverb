@@ -1741,6 +1741,8 @@ static void msm_pm_power_off(void)
 {
 	msm_rpcrouter_close();
 	msm_proc_comm(PCOM_POWER_DOWN, 0, 0);
+	printk(KERN_ERR "%s : going into forever loop\n", __func__);
+
 	for (;;)
 		;
 }
@@ -1781,6 +1783,7 @@ static void msm_pm_restart(char str, const char *cmd)
 {
 	msm_rpcrouter_close();
 	msm_proc_comm(PCOM_RESET_CHIP, &restart_reason, 0);
+	printk(KERN_ERR "%s : going into forever loop\n", __func__);
 
 	for (;;)
 		;

@@ -25,14 +25,38 @@
 #include <linux/time.h>
 #endif
 
-/*#if 1 //def __KERNEL__*/
+#ifdef __KERNEL__
 #include <linux/ion.h>
-/*#endif*/
+#endif
 /* ADD FOR OEM CAMERA START */
 void sensor_rough_control(void __user *arg);
 void sensor_rough_control_sr130pc10(void __user *arg);
 void sensor_rough_control_sr030pc30(void __user *arg);
 /* ADD FOR OEM CAMERA END */
+
+#define VFE_FRAME_NUM_MAX	0x00FFFFFF
+#define ZERO_OUT_FRAME		0xFF000000
+#define CLEAR_FOCUS_BIT		0x7FFFFFFF
+#define get_focus_bit(x) ({ \
+	(x & 0x80000000) >> 31; \
+})
+#define get_frame_num(x) ({ \
+	x & VFE_FRAME_NUM_MAX; \
+})
+#define get_focus_in_position(x) ({ \
+	(x & 00000001) << 31; \
+})
+#define increment_frame_num(x) ({ \
+	uint32_t num = get_frame_num(x); \
+	num = num + 1; \
+	(x & ZERO_OUT_FRAME) | num; \
+})
+#define decrement_frame_num(x) ({ \
+	uint32_t num = get_frame_num(x); \
+	num = num - 1; \
+	(x & ZERO_OUT_FRAME) | num; \
+})
+
 #define MSM_CAM_IOCTL_MAGIC 'm'
 
 #define MSM_CAM_IOCTL_GET_SENSOR_INFO \
@@ -193,6 +217,9 @@ void sensor_rough_control_sr030pc30(void __user *arg);
 
 #define MSM_CAM_IOCTL_MCTL_DIVERT_DONE \
 	_IOR(MSM_CAM_IOCTL_MAGIC, 52, struct msm_cam_evt_divert_frame *)
+
+#define MCTL_CAM_IOCTL_SET_FOCUS \
+	_IOW(MSM_CAM_IOCTL_MAGIC, 53, uint32_t)
 
 struct msm_mctl_pp_cmd {
 	int32_t  id;
@@ -429,11 +456,11 @@ struct msm_camera_cfg_cmd {
 #define CMD_STATS_AF_ENABLE		13
 #define CMD_STATS_AEC_ENABLE		14
 #define CMD_STATS_AWB_ENABLE		15
-#define CMD_STATS_ENABLE		16
+#define CMD_STATS_ENABLE  		16
 
 #define CMD_STATS_AXI_CFG		17
 #define CMD_STATS_AEC_AXI_CFG		18
-#define CMD_STATS_AF_AXI_CFG		19
+#define CMD_STATS_AF_AXI_CFG 		19
 #define CMD_STATS_AWB_AXI_CFG		20
 #define CMD_STATS_RS_AXI_CFG		21
 #define CMD_STATS_CS_AXI_CFG		22
@@ -1219,7 +1246,7 @@ struct sensor_3d_exp_cfg {
 	uint16_t gb_gain;
 	uint16_t gain_adjust;
 };
-struct sensor_3d_cali_data_t {
+struct sensor_3d_cali_data_t{
 	unsigned char left_p_matrix[3][4][8];
 	unsigned char right_p_matrix[3][4][8];
 	unsigned char square_len[8];

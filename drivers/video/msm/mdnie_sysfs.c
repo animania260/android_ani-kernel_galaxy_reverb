@@ -148,7 +148,15 @@ static ssize_t negative_store(struct device *dev,
 
 	return size;
 }
-
+void is_negate_mode_on(void)
+{
+	int ret;
+	if (mdnie_state.negative) {
+		ret = apply_negative_value(1);
+		if (ret != 0)
+			pr_err("[MDNIE:ERROR] ERROR : set negative value faild\n");
+	}
+}
 static DEVICE_ATTR(negative, 0664, negative_show, negative_store);
 
 int apply_negative_value_default(enum eNegative_Mode negative_mode)

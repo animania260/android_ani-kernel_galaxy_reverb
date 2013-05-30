@@ -97,8 +97,8 @@
 #define MTPG_INTR_BUFFER_SIZE	28
 
 /* number of rx and tx requests to allocate */
-#define MTPG_RX_REQ_MAX				8
-#define MTPG_MTPG_TX_REQ_MAX		8
+#define MTPG_RX_REQ_MAX			4
+#define MTPG_MTPG_TX_REQ_MAX		4
 #define MTPG_INTR_REQ_MAX	5
 
 /* ID for Microsoft MTP OS String */

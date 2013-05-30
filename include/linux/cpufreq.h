@@ -340,7 +340,7 @@ enum {
 };
 
 #ifdef CONFIG_MACH_ICON
-#define MAX_FREQ_LIMIT		1612800
+#define MAX_FREQ_LIMIT		1401600
 #else
 #define MAX_FREQ_LIMIT		1024000
 #endif

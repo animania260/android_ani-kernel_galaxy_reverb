@@ -34,6 +34,7 @@
  #include "ion_priv.h"
 
 #include <asm/mach/map.h>
+#include <asm/cacheflush.h>
 
 /**
  * struct ion_cp_heap - container for the heap and shared heap data
@@ -66,7 +67,8 @@
  * @reserved_vrange: reserved virtual address range for use with fmem
  * @iommu_map_all:	Indicates whether we should map whole heap into IOMMU.
  * @iommu_2x_map_domain: Indicates the domain to use for overmapping.
- */
+ * @has_outer_cache:    set to 1 if outer cache is used, 0 otherwise.
+*/
 struct ion_cp_heap {
 	struct ion_heap heap;
 	struct gen_pool *pool;
@@ -90,7 +92,8 @@ struct ion_cp_heap {
 	void *reserved_vrange;
 	int iommu_map_all;
 	int iommu_2x_map_domain;
-
+	unsigned int has_outer_cache;
+	atomic_t protect_cnt;
 };
 
 enum {
@@ -125,7 +128,7 @@ static int ion_cp_protect(struct ion_heap *heap)
 		container_of(heap, struct ion_cp_heap, heap);
 	int ret_value = 0;
 
-	if (cp_heap->heap_protected == HEAP_NOT_PROTECTED) {
+	if (atomic_inc_return(&cp_heap->protect_cnt) == 1) {
 		/* Make sure we are in C state when the heap is protected. */
 		if (cp_heap->reusable && !cp_heap->allocated_bytes) {
 			ret_value = fmem_set_state(FMEM_C_STATE);
@@ -144,6 +147,7 @@ static int ion_cp_protect(struct ion_heap *heap)
 					pr_err("%s: unable to transition heap to T-state\n",
 						__func__);
 			}
+			atomic_dec(&cp_heap->protect_cnt);
 		} else {
 			cp_heap->heap_protected = HEAP_PROTECTED;
 			pr_debug("Protected heap %s @ 0x%lx\n",
@@ -151,6 +155,9 @@ static int ion_cp_protect(struct ion_heap *heap)
 		}
 	}
 out:
+	pr_debug("%s: protect count is %d\n", __func__,
+		atomic_read(&cp_heap->protect_cnt));
+	BUG_ON(atomic_read(&cp_heap->protect_cnt) < 0);
 	return ret_value;
 }
 
@@ -164,7 +171,7 @@ static void ion_cp_unprotect(struct ion_heap *heap)
 	struct ion_cp_heap *cp_heap =
 		container_of(heap, struct ion_cp_heap, heap);
 
-	if (cp_heap->heap_protected == HEAP_PROTECTED) {
+	if (atomic_dec_and_test(&cp_heap->protect_cnt)) {
 		int error_code = ion_cp_unprotect_mem(
 			cp_heap->secure_base, cp_heap->secure_size,
 			cp_heap->permission_type);
@@ -183,6 +190,9 @@ static void ion_cp_unprotect(struct ion_heap *heap)
 			}
 		}
 	}
+	pr_debug("%s: protect count is %d\n", __func__,
+		atomic_read(&cp_heap->protect_cnt));
+	BUG_ON(atomic_read(&cp_heap->protect_cnt) < 0);
 }
 
 ion_phys_addr_t ion_cp_allocate(struct ion_heap *heap,
@@ -541,25 +551,31 @@ int ion_cp_cache_ops(struct ion_heap *heap, struct ion_buffer *buffer,
 			void *vaddr, unsigned int offset, unsigned int length,
 			unsigned int cmd)
 {
-	unsigned long vstart, pstart;
-
-	pstart = buffer->priv_phys + offset;
-	vstart = (unsigned long)vaddr;
+	void (*outer_cache_op)(phys_addr_t, phys_addr_t);
+	struct ion_cp_heap *cp_heap =
+	     container_of(heap, struct  ion_cp_heap, heap);
 
 	switch (cmd) {
 	case ION_IOC_CLEAN_CACHES:
-		clean_caches(vstart, length, pstart);
+		dmac_clean_range(vaddr, vaddr + length);
+		outer_cache_op = outer_clean_range;
 		break;
 	case ION_IOC_INV_CACHES:
-		invalidate_caches(vstart, length, pstart);
+		dmac_inv_range(vaddr, vaddr + length);
+		outer_cache_op = outer_inv_range;
 		break;
 	case ION_IOC_CLEAN_INV_CACHES:
-		clean_and_invalidate_caches(vstart, length, pstart);
+		dmac_flush_range(vaddr, vaddr + length);
+		outer_cache_op = outer_flush_range;
 		break;
 	default:
 		return -EINVAL;
 	}
 
+	if (cp_heap->has_outer_cache) {
+		unsigned long pstart = buffer->priv_phys + offset;
+		outer_cache_op(pstart, pstart + length);
+	}
 	return 0;
 }
 
@@ -874,6 +890,8 @@ struct ion_heap *ion_cp_heap_create(struct ion_platform_heap *heap_data)
 	cp_heap->heap_protected = HEAP_NOT_PROTECTED;
 	cp_heap->secure_base = cp_heap->base;
 	cp_heap->secure_size = heap_data->size;
+	cp_heap->has_outer_cache = heap_data->has_outer_cache;
+	atomic_set(&cp_heap->protect_cnt, 0);
 	if (heap_data->extra_data) {
 		struct ion_cp_heap_pdata *extra_data =
 				heap_data->extra_data;

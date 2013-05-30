@@ -386,9 +386,7 @@ __acquires(&port->port_lock)
 		req = list_entry(pool->next, struct usb_request, list);
 		len = gs_send_packet(port, req->buf, TX_BUF_SIZE);
 		if (len == 0) {
-			/* Queue zero length packet explicitly to make it
-			 * work with UDCs which don't support req->zero flag
-			 */
+			/* Queue zero length packet */
 			if (prev_len && (prev_len % in->maxpacket == 0)) {
 				req->length = 0;
 				list_del(&req->list);
@@ -413,6 +411,7 @@ __acquires(&port->port_lock)
 
 		req->length = len;
 		list_del(&req->list);
+		req->zero = (gs_buf_data_avail(&port->port_write_buf) == 0);
 
 		pr_vdebug(PREFIX "%d: tx len=%d, 0x%02x 0x%02x 0x%02x ...\n",
 				port->port_num, len, *((u8 *)req->buf),
@@ -533,10 +532,6 @@ static void gs_rx_push(struct work_struct *w)
 	/* hand any queued data to the tty */
 	spin_lock_irq(&port->port_lock);
 	tty = port->port_tty;
-
-	/* Delay for Dun Test */
-	mdelay(1);
-
 	while (!list_empty(queue)) {
 		struct usb_request	*req;
 
@@ -1317,7 +1312,7 @@ static void usb_debugfs_init(struct gs_port *ui_dev, int port_num)
 		return;
 
 	debugfs_create_file("readstatus", 0444, dent, ui_dev, &debug_adb_ops);
-	debugfs_create_file("reset", 0222, dent, ui_dev, &debug_rst_ops);
+	debugfs_create_file("reset", 0220, dent, ui_dev, &debug_rst_ops);
 }
 #else
 static void usb_debugfs_init(struct gs_port *ui_dev) {}

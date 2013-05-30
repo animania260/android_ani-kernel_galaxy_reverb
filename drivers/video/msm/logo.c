@@ -152,6 +152,14 @@ err_logo_free_data:
 	kfree(data);
 err_logo_close_file:
 	sys_close(fd);
+#ifndef CONFIG_FRAMEBUFFER_CONSOLE
+	err = fb_pan_display(info, &info->var);
+	if (err < 0) {
+		printk(KERN_WARNING "%s: Can not update framebuffer\n",
+			__func__);
+		return -ENODEV;
+	}
+#endif
 	return err;
 }
 EXPORT_SYMBOL(load_565rle_image);

@@ -636,7 +636,7 @@ static int qseecom_load_app(struct qseecom_dev_handle *data, void __user *argp)
 		struct qseecom_load_app_ireq load_req;
 
 		pr_warn("App (%s) does not exist, loading apps for first time\n",
-			(char *)(req.app_name));
+			(char *)(load_req.app_name));
 		/* Get the handle of the shared fd */
 		ihandle = ion_import_fd(qseecom.ion_clnt,
 					load_img_req.ifd_data_fd);
@@ -665,6 +665,13 @@ static int qseecom_load_app(struct qseecom_dev_handle *data, void __user *argp)
 
 		if (resp.result == QSEOS_RESULT_FAILURE) {
 			pr_err("scm_call rsp.result is QSEOS_RESULT_FAILURE\n");
+			if (!IS_ERR_OR_NULL(ihandle))
+				ion_free(qseecom.ion_clnt, ihandle);
+			return -EFAULT;
+		}
+
+		if (resp.result == QSEOS_RESULT_FAILURE) {
+			pr_err("scm_call failed resp.result QSEOS_RESULT_FAILURE -1\n");
 			if (!IS_ERR_OR_NULL(ihandle))
 				ion_free(qseecom.ion_clnt, ihandle);
 			return -EFAULT;
@@ -707,8 +714,8 @@ static int qseecom_load_app(struct qseecom_dev_handle *data, void __user *argp)
 		spin_unlock_irqrestore(&qseecom.registered_app_list_lock,
 					flags);
 
-		pr_warn("App with id %d (%s) now loaded\n", app_id,
-			(char *)(req.app_name));
+		pr_warn("App with id %d  (%s) now loaded\n", app_id,
+			(char *)(load_req.app_name));
 	}
 	data->client.app_id = app_id;
 	load_img_req.app_id = app_id;
@@ -752,6 +759,8 @@ static int qseecom_unload_app(struct qseecom_dev_handle *data)
 					unload = __qseecom_cleanup_app(data);
 					list_del(&ptr_app->list);
 					kzfree(ptr_app);
+					pr_warn("App id %d now unloaded\n",
+							ptr_app->app_id);
 					break;
 				} else {
 					ptr_app->ref_cnt--;
@@ -782,8 +791,7 @@ static int qseecom_unload_app(struct qseecom_dev_handle *data)
 				sizeof(struct qseecom_unload_app_ireq),
 				&resp, sizeof(resp));
 		if (ret) {
-			pr_err("scm_call to unload app (id = %d) failed\n",
-							req.app_id);
+			pr_err("Fail to unload app id %d\n", req.app_id);
 			return -EFAULT;
 		} else {
 			pr_warn("App id %d now unloaded\n", req.app_id);

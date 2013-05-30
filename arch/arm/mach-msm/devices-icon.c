@@ -13,7 +13,6 @@
  *
  */
 
-
 #include <linux/kernel.h>
 #include <linux/platform_device.h>
 #include <linux/msm_rotator.h>
@@ -27,7 +26,7 @@
 #include <mach/dma.h>
 #include <mach/board.h>
 #include <asm/clkdev.h>
-
+#include <linux/ion.h>
 #include "devices.h"
 #include "gpio_hw.h"
 #include "footswitch.h"
@@ -369,7 +368,7 @@ struct platform_device msm_device_hsusb_otg = {
 	.num_resources	= ARRAY_SIZE(resources_hsusb_otg),
 	.resource	= resources_hsusb_otg,
 	.dev		= {
-		.dma_mask		= &dma_mask,
+		.dma_mask 		= &dma_mask,
 		.coherent_dma_mask	= 0xffffffffULL,
 	},
 };
@@ -406,7 +405,7 @@ struct platform_device msm_device_hsusb_peripheral = {
 	.num_resources	= ARRAY_SIZE(resources_hsusb_peripheral),
 	.resource	= resources_hsusb_peripheral,
 	.dev		= {
-		.dma_mask		= &dma_mask,
+		.dma_mask 		= &dma_mask,
 		.coherent_dma_mask	= 0xffffffffULL,
 	},
 };
@@ -417,7 +416,7 @@ struct platform_device msm_device_gadget_peripheral = {
 	.num_resources	= ARRAY_SIZE(resources_gadget_peripheral),
 	.resource	= resources_gadget_peripheral,
 	.dev		= {
-		.dma_mask		= &dma_mask,
+		.dma_mask 		= &dma_mask,
 		.coherent_dma_mask	= 0xffffffffULL,
 	},
 };
@@ -441,7 +440,7 @@ struct platform_device msm_device_hsusb_host = {
 	.num_resources	= ARRAY_SIZE(resources_hsusb_host),
 	.resource	= resources_hsusb_host,
 	.dev		= {
-		.dma_mask		= &dma_mask,
+		.dma_mask 		= &dma_mask,
 		.coherent_dma_mask	= 0xffffffffULL,
 	},
 };
@@ -792,9 +791,10 @@ static struct resource msm_vidc_720p_resources[] = {
 };
 
 struct msm_vidc_platform_data vidc_platform_data = {
-	.memtype = MEMTYPE_EBI0,
-	.enable_ion = 0,
-	.disable_dmx = 0
+	.memtype = ION_CAMERA_HEAP_ID,
+	.enable_ion = 1,
+	.disable_dmx = 0,
+	.cont_mode_dpb_count = 8
 };
 
 struct platform_device msm_device_vidc_720p = {
@@ -1125,6 +1125,7 @@ static struct kgsl_device_platform_data kgsl_3d0_pdata = {
 	.set_grp_async = set_grp3d_async,
 	.idle_timeout = HZ/20,
 	.nap_allowed = true,
+	.idle_needed = true,
 	.clk_map = KGSL_CLK_SRC | KGSL_CLK_CORE |
 		KGSL_CLK_IFACE | KGSL_CLK_MEM,
 };
@@ -1167,6 +1168,7 @@ static struct kgsl_device_platform_data kgsl_2d0_pdata = {
 	.set_grp_async = NULL,
 	.idle_timeout = HZ/10,
 	.nap_allowed = true,
+	.idle_needed = true,
 	.clk_map = KGSL_CLK_CORE | KGSL_CLK_IFACE,
 };
 

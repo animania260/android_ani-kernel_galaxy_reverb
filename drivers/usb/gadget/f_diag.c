@@ -221,7 +221,12 @@ static void diag_read_complete(struct usb_ep *ep,
 	ctxt->dpkts_tomodem++;
 
 	if (ctxt->ch.notify)
+	{
 		ctxt->ch.notify(ctxt->ch.priv, USB_DIAG_READ_DONE, d_req);
+
+	}
+	else
+		printk(KERN_DEBUG"%s no notify ctxt->ch.notify\n",__func__);
 }
 
 /**
@@ -242,6 +247,7 @@ struct usb_diag_ch *usb_diag_open(const char *name, void *priv,
 	struct diag_context *ctxt;
 	unsigned long flags;
 	int found = 0;
+
 
 	spin_lock_irqsave(&ch_lock, flags);
 	/* Check if we already have a channel with this name */
@@ -570,6 +576,7 @@ static int diag_function_bind(struct usb_configuration *c,
 	struct diag_context *ctxt = func_to_diag(f);
 	struct usb_ep *ep;
 	int status = -ENODEV;
+
 
 	intf_desc.bInterfaceNumber =  usb_interface_id(c, f);
 

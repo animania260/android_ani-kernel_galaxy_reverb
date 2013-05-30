@@ -37,6 +37,12 @@ config IMX074
 	default n
 	---help---
 	SONY 13.5 MP Bayer Sensor
+config OV5640
+	bool "Sensor OV5640 (YUV 5M)"
+	depends on MSM_CAMERA && !MSM_CAMERA_V4L2
+	default n
+	---help---
+	Omni 5M YUV Sensor
 config S5K5CCGX
 	bool "Sensor S5K5CCGX 1/5 (3M/GX)"
 	depends on MSM_CAMERA && !ARCH_MSM8X60
@@ -64,21 +70,6 @@ config SR130PC10
 	  This sensor is the front camera
 	  This sensor is the parallel interface
 	  This sensor is in prevail2, ICON
-config SR030PC30
-	bool "Sensor SR030PC30"
-	depends on MSM_CAMERA && !ARCH_MSM8X60
-	default n
-	---help---
-	  Siliconfile 1.3M.
-	  This sensor is the front camera
-	  This sensor is the mipi interface
-	  This sensor is in vital2-refresh
-config OV5640
-	bool "Sensor OV5640 (YUV 5M)"
-	depends on MSM_CAMERA && !MSM_CAMERA_V4L2
-	default n
-	---help---
-	Omni 5M YUV Sensor
 config WEBCAM_OV7692_QRD
 	bool "Sensor OV7692 QRD(VGA YUV)"
 	depends on MSM_CAMERA && ARCH_MSM7X27A && !MSM_CAMERA_V4L2
@@ -106,7 +97,7 @@ config WEBCAM_OV9726
 #	This uses the CSI interface.
 config VX6953
 	bool "Sensor VX6953 (BAYER 5M)"
-	depends on MSM_CAMERA && (ARCH_MSM7X30 || ARCH_MSM8X60)
+	depends on MSM_CAMERA && (ARCH_MSM7X30 || ARCH_MSM8X60) && !MSM_CAMERA_V4L2
 	default n
 	---help---
 	STM 5M Bayer Sensor with EDOF
@@ -270,3 +261,17 @@ config S5K3L1YX
 		4 mipi lanes, preview config = 1984 * 1508 at 30 fps,
 		snapshot config = 4000 * 3000 at 20 fps,
 		hfr video at 60, 90 and 120 fps.
+
+config MSM_V4L2_VIDEO_OVERLAY_DEVICE
+	tristate "Qualcomm MSM V4l2 video overlay device"
+	---help---
+	  Enables support for the MSM V4L2 video
+	  overlay driver. This allows video rendering
+	  apps to render overlaid video using Video4Linux2
+	  APIs, by using /dev/videoX device
+
+config OV7692
+	bool "Sensor OV7692 (VGA YUV)"
+	depends on MSM_CAMERA
+	---help---
+		Omni Vision VGA YUV Sensor.

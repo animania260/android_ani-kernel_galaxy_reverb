@@ -86,7 +86,7 @@ unsigned count_multi_config(struct usb_configuration *c, unsigned count)
 		return 0;
 	}
 
-	list_for_each_entry(f, &c->functions, list) {
+	list_for_each_entry(f, &c->functions, list) {			
 		if (!strcmp(f->name, MULTI_FUNCTION_1)) {
 			USB_DBG("%s +\n", MULTI_FUNCTION_1);
 			f_first = 1;
